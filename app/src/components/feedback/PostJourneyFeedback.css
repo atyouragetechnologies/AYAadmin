@@ -1,0 +1,78 @@
+.post-journey-feedback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(200, 139, 90, 0.05) 0%, rgba(224, 176, 96, 0.05) 100%);
+  border-radius: 12px;
+  margin: 2rem 0;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feedback-prompt {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #ffffff;
+  margin: 0;
+}
+
+.emoji-reactions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.emoji-btn {
+  background: none;
+  border: 2px solid transparent;
+  font-size: 2.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  transform: scale(1);
+}
+
+.emoji-btn:hover:not(:disabled) {
+  transform: scale(1.2);
+  border-color: #c77b2f;
+  background: rgba(199, 123, 47, 0.1);
+}
+
+.emoji-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.emoji-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.feedback-hint {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.feedback-confirmation {
+  text-align: center;
+  padding: 1.5rem;
+  background: #d4f1d4;
+  border-radius: 8px;
+  color: #2d5a2d;
+  font-weight: 500;
+  animation: slideUp 0.3s ease-out;
+}

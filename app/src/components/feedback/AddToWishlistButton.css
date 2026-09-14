@@ -1,0 +1,46 @@
+.add-to-wishlist-btn {
+  background: linear-gradient(135deg, #d4943a 0%, #c77b2f 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(199, 123, 47, 0.3);
+}
+
+.add-to-wishlist-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(199, 123, 47, 0.4);
+}
+
+.add-to-wishlist-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.add-to-wishlist-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wishlist-added-confirmation {
+  background: #d4f1d4;
+  color: #2d5a2d;
+  padding: 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

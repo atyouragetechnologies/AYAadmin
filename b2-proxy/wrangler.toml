@@ -1,0 +1,10 @@
+name = "aya-assets-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-02-23"
+
+[vars]
+B2_ENDPOINT = "s3.us-east-005.backblazeb2.com"
+B2_BUCKET_NAME = "aya-game-assets-cloud"
+B2_REGION = "us-east-005"
+
+account_id = "de1041307075246ab0f31e4c9c0b66dd"

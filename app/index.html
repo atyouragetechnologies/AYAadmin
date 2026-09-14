@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="icon" type="image/png" href="/game/icons/favicon.png" />
+  <link rel="manifest" href="/game/manifest.json">
+  
+  <!-- CRITICAL: iOS viewport fix — prevents black screen from viewport height issues -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0" />
+
+  <!-- iOS Safari web app meta tags -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="At Your Age" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0A051A" />
+
+  <!-- DNS Preconnect: TCP connections before JS fires -->
+  <link rel="preconnect" href="https://hstddacoqsmztmbvvhhr.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="https://hstddacoqsmztmbvvhhr.supabase.co" />
+  <!-- Force iOS Safari to use hardware acceleration -->
+  <meta name="format-detection" content="telephone=no" />
+
+  <!-- Prevent iOS link preview popups from breaking layout -->
+  <meta name="apple-touch-fullscreen" content="yes" />
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/game/apple-touch-icon.png">
+  <link rel="apple-touch-icon-precomposed" href="/game/apple-touch-icon-precomposed.png">
+  <title>At Your Age — AYA</title>
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-30ZXCBJXSQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-30ZXCBJXSQ');
+  </script>
+
+  <!-- Google Translate -->
+  <style>
+    /* Hide the ugly Google Translate widget */
+    .skiptranslate, #google_translate_element, .goog-te-banner-frame {
+        display: none !important;
+    }
+    body {
+        top: 0px !important; 
+    }
+  </style>
+  <meta name="google-site-verification" content="ToWAOpzqATtIKgHiP1IeCx4ZDvEnFCbPWlj6oj_3IY4" />
+</head>
+
+<body>
+  <div id="google_translate_element"></div>
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'en,hi', autoDisplay: false}, 'google_translate_element');
+    }
+  </script>
+  <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <!-- 
+      Loading screen shown before React mounts.
+      Prevents black flash on iOS.
+      Hidden by JS once app is ready.
+    -->
+    <div id="app-loader" style="
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(to bottom, #281A4B, #1E1338, #1A1033);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      font-family: system-ui, -apple-system, sans-serif;
+      transition: opacity 0.4s ease;
+      user-select: none;
+    ">
+      <div style="
+        position: relative;
+        width: 180px;
+        height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <div style="
+          position: absolute;
+          inset: 0;
+          background: rgba(168, 85, 247, 0.25);
+          filter: blur(40px);
+          border-radius: 50%;
+        "></div>
+        <img id="mascot-frame-img" src="https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/mascot_frames/frame_1.webp" alt="Loading" style="
+          position: relative;
+          z-index: 10;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          filter: drop-shadow(0 0 20px rgba(213, 117, 255, 0.4));
+        " />
+      </div>
+      <p style="
+        color: #00f2ff;
+        font-size: 0.95rem;
+        font-weight: 900;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        margin-top: 1.5rem;
+        text-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
+        animation: mascotPulse 1.5s ease-in-out infinite;
+      ">LOADING YOUR UNIVERSE...</p>
+    </div>
+
+    <style>
+      @keyframes mascotPulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(0.98); }
+      }
+    </style>
+
+    <div id="root"></div>
+
+    <script>
+      (function() {
+        var frameTimestamps = [0,40,80,120,160,200,280,320,360,400,440,480,520,560,600,640,720,760,800,840,880,920,960,1000,1040,1080,1160,1200,1240,1280,1320,1360,1400,1440,1480,1520,1560,1600,1680,1720,1760,1800,1840,1880];
+        var totalFrames = frameTimestamps.length;
+        var loopDuration = 1920;
+        var imgEl = document.getElementById('mascot-frame-img');
+        
+        // Defer preloading frames so it doesn't block the React bundle download
+        setTimeout(function() {
+          for (var i = 2; i <= totalFrames; i++) {
+            var im = new Image();
+            im.src = 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/mascot_frames/frame_' + i + '.webp';
+          }
+        }, 100);
+
+        var startTime = performance.now();
+        var animId = null;
+        var lastIdx = 0;
+
+        function lookupFrame(elapsedMs) {
+          var lo = 0, hi = totalFrames - 1;
+          if (elapsedMs >= frameTimestamps[hi]) return hi;
+          while (lo < hi) {
+            var mid = (lo + hi + 1) >> 1;
+            if (frameTimestamps[mid] <= elapsedMs) lo = mid; else hi = mid - 1;
+          }
+          return lo;
+        }
+
+        function tick(now) {
+          var elapsed = (now - startTime) % loopDuration;
+          var idx = lookupFrame(elapsed);
+          if (idx !== lastIdx && imgEl) {
+            lastIdx = idx;
+            imgEl.src = 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/mascot_frames/frame_' + (idx + 1) + '.webp';
+          }
+          animId = requestAnimationFrame(tick);
+        }
+
+        animId = requestAnimationFrame(tick);
+
+        function dismissLoader() {
+          var loader = document.getElementById('app-loader');
+          if (loader && loader.style.display !== 'none') {
+            loader.style.opacity = '0';
+            setTimeout(function() {
+              loader.style.display = 'none';
+              if (animId) cancelAnimationFrame(animId);
+            }, 400);
+          }
+        }
+
+        window.addEventListener('load', function() {
+          setTimeout(dismissLoader, 400);
+        });
+
+        // Failsafe timeout so mobile phones never get stuck on the loader
+        setTimeout(dismissLoader, 3200);
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

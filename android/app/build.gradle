@@ -1,0 +1,133 @@
+apply plugin: 'com.android.application'
+apply plugin: 'com.google.firebase.crashlytics'
+
+// Load keystore properties from a file (keeps credentials out of source control)
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace = "com.aya.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+
+    // Java 11: required by Capacitor 7+ and modern Kotlin toolchain.
+    // coreLibraryDesugaring backports java.time and other modern Java APIs to Android 8+.
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    defaultConfig {
+        applicationId "com.aya.app"
+        minSdkVersion rootProject.ext.minSdkVersion      // 26 (Android 8.0)
+        targetSdkVersion rootProject.ext.targetSdkVersion // 37
+        versionCode 5
+        versionName "5.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        aaptOptions {
+            // Omit dev/VCS metadata from packaged assets — reduces asset dir noise
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+
+        // ABI filters: only ship ARM slices in the APK.
+        // x86/x86_64 are only needed for emulators — added back in debug config below.
+        // On the Play Store, use AAB instead and let Google deliver per-ABI slices.
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a"
+        }
+    }
+
+    signingConfigs {
+        release {
+            // Read from keystore.properties (never commit this file to git)
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            } else if (project.hasProperty('MYAPP_RELEASE_STORE_FILE')) {
+                // Fallback: legacy gradle.properties approach
+                storeFile file(MYAPP_RELEASE_STORE_FILE)
+                storePassword MYAPP_RELEASE_STORE_PASSWORD
+                keyAlias MYAPP_RELEASE_KEY_ALIAS
+                keyPassword MYAPP_RELEASE_KEY_PASSWORD
+            }
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            // Modern compressed .so packaging — smaller APK, faster install
+            useLegacyPackaging = false
+        }
+    }
+
+    buildTypes {
+        release {
+            // R8 (successor to ProGuard): minifies, shrinks, and obfuscates.
+            // Removes unused Java code + unused Android resources → 40-60% smaller APK.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            ndk {
+                // Full debug symbols for crash stack trace symbolication (e.g., Firebase Crashlytics)
+                debugSymbolLevel 'FULL'
+            }
+        }
+        debug {
+            minifyEnabled false
+            ndk {
+                // Add x86/x86_64 in debug only — supports Android Studio emulators
+                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+            }
+        }
+    }
+
+    lint {
+        // Don't block builds on Lint warnings — report them but keep going
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+repositories {
+    flatDir {
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    // Backports modern Java APIs (java.time, etc.) to Android 8+
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation libs.androidx.appcompat
+    implementation libs.androidx.coordinatorlayout
+    implementation libs.androidx.core.splashscreen
+    implementation project(':capacitor-android')
+    implementation platform('com.google.firebase:firebase-bom:34.19.0')
+    implementation 'com.google.firebase:firebase-messaging'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-crashlytics'
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+        apply plugin: 'com.google.firebase.crashlytics'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

@@ -1,0 +1,1056 @@
+@import "tailwindcss";
+
+/* ============================================================
+   IOS SAFARI VIEWPORT FIX
+   Must be at top of CSS file, before any other rules
+   ============================================================ */
+:root {
+  /* iOS-safe viewport height — use this everywhere instead of 100vh */
+  --vh: 1vh; /* Will be overridden by JS below */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
+/* Custom Edge-to-Edge Safe Area Utilities */
+/* pb-safe / pt-safe: min 1.2rem padding even if device has no safe area (for buttons/footers) */
+@utility pb-safe {
+  padding-bottom: max(1.2rem, env(safe-area-inset-bottom, 0px));
+}
+@utility pt-safe {
+  padding-top: max(1.2rem, env(safe-area-inset-top, 0px));
+}
+@utility mb-safe {
+  margin-bottom: max(1.2rem, env(safe-area-inset-bottom, 0px));
+}
+@utility mt-safe {
+  margin-top: max(1.2rem, env(safe-area-inset-top, 0px));
+}
+@utility bottom-safe {
+  bottom: max(1.2rem, env(safe-area-inset-bottom, 0px));
+}
+/* pb-inset / pt-inset: EXACT safe area only — no minimum (for fullscreen wrappers) */
+@utility pb-inset {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@utility pt-inset {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Use this class instead of h-screen or min-h-screen on iOS */
+.full-height {
+  height: 100vh;
+  height: 100dvh; /* Modern browsers */
+  height: calc(var(--vh, 1vh) * 100); /* iOS fallback */
+}
+
+/* Prevent iOS from zooming inputs */
+input, select, textarea {
+  font-size: 16px !important; /* Below 16px causes iOS auto-zoom */
+}
+
+/* iOS backdrop-filter global performance fix */
+[class*="backdrop-blur"], .cinematic-card, .cinematic-badge, .cinematic-choice, .cinematic-toggle, .vsb-pill {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  isolation: isolate;
+}
+
+html, body {
+  height: 100%;
+  height: -webkit-fill-available;
+  overflow-x: hidden;
+  position: relative;
+  scroll-behavior: smooth !important;
+  -webkit-scroll-behavior: smooth !important;
+  -webkit-overflow-scrolling: touch !important; /* iOS momentum scrolling */
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* Hide scrollbars globally on all browsers while preserving scrollability */
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+body {
+  background-color: #0f172a;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  overscroll-behavior-y: none; /* Native fix: Prevent scroll bounce / glow */
+  scroll-behavior: smooth !important;
+  /* iOS Safe Areas */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ============================================================
+   ANDROID NATIVE APP — Targeted overrides (.is-android added by useNativeFeatures.ts)
+   Only active when running inside the Capacitor APK, never on the website.
+   ============================================================ */
+
+/* Edge-to-edge: StatusBar is overlaying WebView, so body padding handles the inset */
+body.is-android {
+  /* overscroll-behavior-y: contain prevents Android Chrome pull-to-refresh gesture */
+  overscroll-behavior-y: contain;
+  /* padding is already set via env(safe-area-inset-*) in body above — no duplication needed */
+}
+
+/* Prevent text selection on long-press — breaks cinematic story immersion */
+body.is-android *:not(input):not(textarea) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Prevent tap highlight flash on Android Chrome (replaces the default grey rectangle) */
+body.is-android * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Google Material Design minimum touch target: 48×48dp */
+body.is-android button,
+body.is-android a,
+body.is-android [role="button"] {
+  min-height: 48px;
+}
+
+/* 
+ * Game screen immersive mode: when body has .statusbar-hidden class (added by ScenarioGame),
+ * the status bar is hidden so we don't need the top inset spacing 
+ */
+body.is-android.statusbar-hidden {
+  padding-top: 0 !important;
+}
+
+/* ── OFFLINE INDICATOR BANNER (No React needed!) ──────────────────────────
+ * When body.is-offline is set by the Network plugin listener,
+ * a sleek "No Internet" bar appears at the top of every screen. Pure CSS.
+ */
+body.is-android.is-offline::before {
+  content: "⚡ No internet connection";
+  display: block;
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: linear-gradient(90deg, #7c3aed, #6d28d9);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+  animation: slide-down 0.3s ease forwards;
+}
+
+@keyframes slide-down {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+/* ── SCROLL PERFORMANCE ────────────────────────────────────────────────────
+ * Enable hardware-accelerated momentum scrolling on all scroll containers.
+ * This prevents the janky "rubber band" feel on Android WebView.
+ */
+body.is-android *[class*="overflow-y"],
+body.is-android *[id$="-scroll-container"] {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── GPU COMPOSITING HINT ──────────────────────────────────────────────────
+ * Tells the browser to promote animated elements to their own GPU layer.
+ * Prevents frame drops on animated backgrounds (MapAmbience, AntiGravityCanvas).
+ */
+body.is-android canvas {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* ============================================================ */
+
+/* Optimize touch targets and disable 300ms delay on mobile */
+button, 
+a, 
+input, 
+select, 
+textarea, 
+[role="button"] {
+  touch-action: manipulation;
+}
+
+@theme {
+  --font-comic: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+  --font-yummy: 'Varela Round', 'Quicksand', 'Comic Sans MS', sans-serif;
+}
+
+
+@keyframes ping-slow {
+
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-ping-slow {
+  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+
+/* Ambience Animations - AMPLIFIED */
+@keyframes float-cloud {
+  0% {
+    transform: translateX(-200px) scale(0.8);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.9;
+  }
+
+  90% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translateX(100vw) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes fly-bird {
+  0% {
+    transform: translate(-20vw, 20vh) scale(0.8) rotate(10deg);
+  }
+
+  25% {
+    transform: translate(30vw, 10vh) scale(1.2) rotate(-5deg);
+  }
+
+  50% {
+    transform: translate(60vw, 30vh) scale(1.0) rotate(5deg);
+  }
+
+  75% {
+    transform: translate(90vw, 5vh) scale(1.1) rotate(-5deg);
+  }
+
+  100% {
+    transform: translate(120vw, 20vh) scale(0.9) rotate(10deg);
+  }
+}
+
+@keyframes fly-bird-reverse {
+  0% {
+    transform: translate(120vw, 15vh) scale(0.7) rotate(-10deg) scaleX(-1);
+  }
+
+  100% {
+    transform: translate(-20vw, 40vh) scale(0.9) rotate(5deg) scaleX(-1);
+  }
+}
+
+@keyframes fly-bird-swoop {
+  0% {
+    transform: translate(-10vw, 80vh) scale(0.5) rotate(-40deg);
+  }
+
+  40% {
+    transform: translate(50vw, 20vh) scale(1.0) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(110vw, 5vh) scale(0.6) rotate(10deg);
+  }
+}
+
+@keyframes river-flow {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  100% {
+    background-position: 200% 200%;
+  }
+}
+
+@keyframes sparkle-twinkle {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(2.0);
+    filter: drop-shadow(0 0 8px white);
+  }
+}
+
+.animate-cloud-slow {
+  animation: float-cloud 35s linear infinite;
+  /* Faster */
+}
+
+.animate-cloud-medium {
+  animation: float-cloud 25s linear infinite;
+  /* Faster */
+}
+
+.animate-bird-1 {
+  animation: fly-bird 18s ease-in-out infinite;
+  /* Bigger, bolder motion */
+}
+
+.animate-bird-2 {
+  animation: fly-bird 22s ease-in-out infinite;
+  animation-delay: 8s;
+}
+
+.animate-bird-3 {
+  animation: fly-bird-reverse 25s linear infinite;
+  animation-delay: 2s;
+}
+
+.animate-bird-4 {
+  animation: fly-bird-swoop 15s ease-out infinite;
+  animation-delay: 5s;
+}
+
+.animate-bird-5 {
+  animation: fly-bird 20s linear infinite;
+  animation-delay: 12s;
+}
+
+.animate-river-flow {
+  /* Stronger, more visible "water" shimmer */
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0) 30%, rgba(180, 240, 255, 0.5) 50%, rgba(255, 255, 255, 0) 70%);
+  background-size: 200% 200%;
+  animation: river-flow 4s linear infinite;
+  /* Fast flow */
+}
+
+.animate-sparkle {
+  animation: sparkle-twinkle 1.5s ease-in-out infinite;
+}
+
+/* --- CANDY MAP OVERHAUL STYLES --- */
+
+/* 1. Progression Path Stones (Jelly Beans / Hard Candy) */
+.candy-path-stone {
+  /* Base shape */
+  border-radius: 50%;
+  /* 3D "Pop" Effect */
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.2),
+    /* Drop shadow for depth */
+    inset 0 -4px 0 rgba(0, 0, 0, 0.1),
+    /* Bottom lip shade */
+    inset 0 4px 8px rgba(255, 255, 255, 0.5);
+  /* Top gloss shine */
+}
+
+/* 2. Lollipop / Candy Node Styles */
+.lollipop-stick {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 60px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #cbd5e1 50%, #94a3b8 100%);
+  border-radius: 4px;
+  z-index: -1;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.candy-node-locked {
+  filter: grayscale(0.8) brightness(1.1);
+}
+
+.candy-node-active {
+  animation: bounce-float 3s ease-in-out infinite;
+}
+
+.candy-node-completed .node-content {
+  filter: sepia(0.2) contrast(1.1);
+}
+
+@keyframes bounce-float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* 3. Background Layers */
+.layer-hills-back {
+  background: linear-gradient(180deg, #f9a8d4 0%, #f472b6 100%);
+  /* Pink Hills */
+  mask-image: radial-gradient(ellipse at center, black 40%, transparent 70%);
+}
+
+.layer-hills-mid {
+  background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%);
+  /* Purple Hills */
+}
+
+.layer-hills-front {
+  background: linear-gradient(180deg, #fdba74 0%, #fb923c 100%);
+  /* Orange Hills */
+}
+
+/* CANDY ANIMATIONS */
+@keyframes float-up {
+  0% {
+    transform: translateY(110vh) rotate(0deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-10vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes float-down {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(110vh) rotate(-360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes wiggly-float {
+  0% {
+    transform: translate(0, 0) rotate(-5deg);
+  }
+
+  50% {
+    transform: translate(20px, -20px) rotate(5deg);
+  }
+
+  100% {
+    transform: translate(0, 0) rotate(-5deg);
+  }
+}
+
+.animate-float-up-slow {
+  animation: float-up 25s linear infinite;
+}
+
+.animate-float-up-medium {
+  animation: float-up 15s linear infinite;
+}
+
+.animate-float-down-slow {
+  animation: float-down 30s linear infinite;
+}
+
+.animate-wiggle-float {
+  animation: wiggly-float 6s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin 10s linear infinite;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100dvh;
+  @apply bg-slate-950 text-white;
+}
+
+@keyframes ken-burns {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+
+  50% {
+    transform: scale(1.1) translate(-1%, -1%);
+  }
+
+  100% {
+    transform: scale(1) translate(0, 0);
+  }
+}
+
+.animate-ken-burns {
+  animation: ken-burns 20s ease-in-out infinite alternate;
+}
+
+@keyframes float-up {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(1.2);
+  }
+}
+
+.animate-float-up {
+  animation: float-up 1.5s ease-out forwards;
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes float-score {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.5);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translateY(0px) scale(1.2);
+  }
+
+  40% {
+    transform: translateY(0px) scale(1.0);
+  }
+
+  80% {
+    opacity: 1;
+    transform: translateY(-30px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+}
+
+.animate-float-score {
+  animation: float-score 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-cursor-blink {
+  animation: blink 0.8s infinite;
+}
+
+@keyframes float-up-screen {
+  0% {
+    transform: translateY(110vh) rotate(0deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.3;
+  }
+
+  90% {
+    opacity: 0.3;
+  }
+
+  100% {
+    transform: translateY(-10vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-float-up {
+  /* Default override for background elements */
+  animation: float-up-screen 20s linear infinite;
+}
+
+@keyframes shine {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shine {
+  animation: shine 2s infinite;
+}
+
+/* Custom Scrollbar Utilities — Hidden with smooth scrolling */
+.scrollbar-hide,
+.custom-scrollbar,
+.scrollbar-thin,
+.neon-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+  scroll-behavior: smooth !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.scrollbar-hide::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar,
+.scrollbar-thin::-webkit-scrollbar,
+.neon-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* --- New Ambient Animations --- */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes float-horizontal {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(10px); }
+}
+
+@keyframes pulse-glow-cyan {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(0, 242, 255, 0.5)); }
+  50% { filter: drop-shadow(0 0 15px rgba(0, 242, 255, 0.8)); }
+}
+
+@keyframes pulse-glow-amber {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.5)); }
+  50% { filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.8)); }
+}
+
+@keyframes breath {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.03); opacity: 1; }
+}
+
+@keyframes subtle-rotate {
+  0%, 100% { transform: rotate(-1deg); }
+  50% { transform: rotate(1deg); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float 5s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+.animate-breath {
+  animation: breath 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow-cyan {
+  animation: pulse-glow-cyan 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow-amber {
+  animation: pulse-glow-amber 3s ease-in-out infinite;
+}
+
+.animate-subtle-rotate {
+  animation: subtle-rotate 5s ease-in-out infinite;
+}
+
+/* ─── Cinematic Scenario Game — 3D Emotion Color Transitions ─── */
+
+.cinematic-container {
+  transition: all 0.8s ease;
+}
+
+.cinematic-card {
+  transition: all 0.8s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+@media (min-width: 768px) {
+  .cinematic-card {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+.cinematic-badge {
+  transition: all 0.8s ease;
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.cinematic-choice {
+  transition: all 0.3s ease;
+  background: rgba(0,0,0,0.6);
+}
+
+@media (min-width: 768px) {
+  .cinematic-badge {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .cinematic-choice {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0,0,0,0.4);
+  }
+}
+
+.cinematic-choice:hover {
+  transform: translateY(-2px);
+  /* Box-shadow and border color set dynamically via style props */
+}
+
+.cinematic-continue {
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+}
+
+.cinematic-continue:hover {
+  transform: scale(1.03);
+}
+
+.cinematic-vignette {
+  transition: all 0.8s ease;
+}
+
+.cinematic-toggle {
+  transition: all 0.8s ease;
+  background: rgba(0,0,0,0.6);
+}
+
+@media (min-width: 768px) {
+  .cinematic-toggle {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(0,0,0,0.4);
+  }
+}
+
+/* --- MOBILE LOGIN & LAYOUT FIXES --- */
+
+/* Fix 4, 6: Mobile input sizing and styling */
+input[type="text"],
+input[type="tel"],
+input[type="number"] {
+  font-size: 16px !important;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border-radius: 12px;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Header search input override - prevent mobile input styling from expanding header */
+#header-search-portal input[type="text"] {
+  padding: 0 0 0 8px !important;
+  height: 28px !important;
+  min-height: unset !important;
+  max-height: 28px !important;
+  border-radius: 0 !important;
+  font-size: 13px !important;
+  line-height: normal !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Fix 5: Button styling */
+.login-button {
+  width: 100%;
+  min-height: 56px;
+  font-size: 16px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+/* Fix 6: Prevent horizontal overflow */
+* {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+body, #root {
+  overflow-x: hidden;
+}
+
+.login-container {
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-bottom: max(80px, env(safe-area-inset-bottom)); /* fallback padding 80px for keyboard */
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+}
+
+/* Mobile: move right-side buttons to bottom-right so they never overlap node labels */
+@media (max-width: 768px) {
+  .map-right-buttons {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 40px !important;
+    right: 12px !important;
+  }
+}
+
+/* Fix 2: Header username/XP section — prevent overlap with logo on mobile */
+@media (max-width: 480px) {
+  /* Stats wrapper: shrink so it doesn't push into the logo */
+  header > div:last-child {
+    max-width: 55vw;
+    overflow: hidden;
+  }
+  /* Name span: tighter cap on very small screens */
+  header .truncate {
+    max-width: 40px;
+  }
+  /* XP badge: smaller text */
+  header span[class*="text-[10px]"] {
+    font-size: 9px;
+  }
+}
+
+/* Fix 3: Personality name & story title labels — not clipped by global max-width:100% */
+.personality-name-label,
+.story-title-label {
+  max-width: none !important;
+  overflow: visible !important;
+}
+
+/* Node containers must allow label overflow */
+.personality-node-container,
+.candy-node-container {
+  overflow: visible !important;
+}
+
+
+/* Glassmorphism Utility */
+.glass-panel {
+  background: rgba(20, 15, 25, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================================
+   NUCLEAR IOS PERFORMANCE OPTIMIZATIONS
+   ============================================================ */
+
+/* Force GPU acceleration on animated elements */
+/* This prevents iOS from dropping frames during animations */
+.hero-section,
+.narrative-section,
+.founders-section,
+.timeline-section,
+[class*="section"],
+[class*="Section"],
+.glass-panel,
+.cinematic-card {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* iOS: Input font size fix (prevents auto-zoom) */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+input[type="search"],
+textarea,
+select {
+  font-size: 16px !important; /* 16px minimum prevents iOS zoom */
+}
+
+/* iOS: Tap highlight removal */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS: Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  -webkit-scroll-behavior: smooth;
+}
+
+/* iOS: Prevent text size adjustment on orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Safe area padding for iPhone notch/home indicator */
+.page-container,
+.app-wrapper,
+main,
+.main-content {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* iOS override: solid background, no blur for ALL glassmorphic elements */
+@supports (-webkit-touch-callout: none) {
+  /* This targets iOS Safari specifically */
+  [class*="backdrop-blur"],
+  .glass-panel,
+  .cinematic-card,
+  .cinematic-badge,
+  .cinematic-choice,
+  .cinematic-toggle,
+  .vsb-pill,
+  [class*="blur-"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    /* Use a solid, dark, slightly transparent background instead of expensive blur */
+    background-color: rgba(4, 7, 15, 0.95) !important;
+  }
+}
+
+/* ============================================================
+   CPBS CINEMATIC UTILITIES
+   Standardized keyframes for lightweight, generic animations
+   ============================================================ */
+
+/* --- Staggered Entrance Animation --- */
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUpFade {
+  animation: slideUpFade 1s cubic-bezier(0.25, 0.8, 0.25, 1) both;
+}
+
+.stagger-container > * {
+  animation: slideUpFade 1s cubic-bezier(0.25, 0.8, 0.25, 1) both;
+}
+
+.stagger-container > *:nth-child(1) { animation-delay: 100ms; }
+.stagger-container > *:nth-child(2) { animation-delay: 200ms; }
+.stagger-container > *:nth-child(3) { animation-delay: 300ms; }
+.stagger-container > *:nth-child(4) { animation-delay: 400ms; }
+.stagger-container > *:nth-child(5) { animation-delay: 500ms; }
+
+/* --- Cinematic Glow --- */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(212, 160, 23, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 213, 79, 0.95);
+  }
+}
+
+.animate-glow {
+  animation: glow 2s infinite;
+}
+
+/* --- Shimmer / Loading Skeleton --- */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.4) 20%,
+    rgba(255, 255, 255, 0.6) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 2s infinite;
+}
+
+/* --- Pop / Toast In --- */
+@keyframes toastIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-toastIn {
+  animation: toastIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}

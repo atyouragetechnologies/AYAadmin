@@ -1,0 +1,279 @@
+/* ══════════════════════════════════════════════════════════
+   VibeSpinnerButton.css — Premium dark glass pill button
+   with spinning 3D mini-wheel and glowing neon effects.
+   Includes locked / countdown state.
+   ══════════════════════════════════════════════════════════ */
+
+.vsb-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* ── Pill container ──────────────────────────────────────── */
+.vsb-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px 0 6px;
+  height: 46px; /* Mobile */
+  border-radius: 999px;
+  background: rgba(10, 15, 25, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  isolation: isolate;
+  cursor: pointer;
+  white-space: nowrap;
+
+  /* Double neon border: inner 1px cyan + outer 2px gold */
+  box-shadow:
+    inset 0 0 0 1px #00E5FF,
+    0 0 0 2px #FFD700,
+    0 0 8px #00E5FF;
+  animation: vsb-breathing-glow 2s ease-in-out infinite;
+
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.3s;
+  -webkit-tap-highlight-color: transparent;
+  font-family: 'Space Grotesk', sans-serif;
+  z-index: 10;
+  border: none; /* overriding user agent stylesheet */
+}
+
+@media (min-width: 768px) {
+  .vsb-pill {
+    height: 52px;
+    padding: 0 24px 0 8px;
+    gap: 14px;
+  }
+}
+
+@keyframes vsb-breathing-glow {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 0 1px #00E5FF,
+      0 0 0 2px #FFD700,
+      0 0 8px #00E5FF;
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px #00E5FF,
+      0 0 0 2px #FFD700,
+      0 0 24px #00E5FF,
+      0 0 40px #FFD700;
+  }
+}
+
+.vsb-pill:not(.vsb-locked):hover {
+  transform: scale(1.04);
+  animation: none;
+  box-shadow:
+    inset 0 0 0 1px #00E5FF,
+    0 0 0 2px #FFD700,
+    0 0 30px #00E5FF,
+    0 0 50px #FFD700;
+}
+
+/* On hover (unlocked): mini wheel spins faster */
+.vsb-pill:not(.vsb-locked):hover .vsb-wheel-face {
+  animation: mini-wheel-spin 1s linear infinite;
+}
+
+/* ── LOCKED STATE ─────────────────────────────────────────── */
+.vsb-pill.vsb-locked {
+  animation: none;                          /* no breathing glow */
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.15),
+    0 0 0 1px rgba(255,255,255,0.08);       /* dim grey border */
+  cursor: default;
+  filter: none;
+  padding: 0 16px 0 6px;
+  gap: 10px;
+}
+
+/* ── Mini wheel ───────────────────────────────────── */
+.vsb-mini-wheel-wrap {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+}
+.vsb-mini-wheel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: relative;
+}
+
+/* Locked mini wheel — greyscale + no spin */
+.vsb-mini-wheel-locked {
+  filter: grayscale(1) brightness(0.5);
+}
+
+/* The spinning face */
+.vsb-wheel-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    #8B0030 0deg 60deg,
+    #7A3800 60deg 120deg,
+    #7A6000 120deg 180deg,
+    #003D47 180deg 240deg,
+    #004D2A 240deg 300deg,
+    #3D0080 300deg 360deg
+  );
+  animation: mini-wheel-spin 6s linear infinite;
+  box-shadow: inset 0 1px 3px rgba(255,255,255,0.4);
+}
+
+/* Locked face — static, no spin */
+.vsb-wheel-face-locked {
+  animation: none !important;
+}
+
+@keyframes mini-wheel-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Gold ring rim */
+.vsb-wheel-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid #FFD700;
+  box-shadow: 0 0 6px #FFD70080, inset 0 0 4px #FFD70060;
+  pointer-events: none;
+}
+
+/* Center hub */
+.vsb-wheel-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 25%;
+  height: 25%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0%, #FFD700 40%, #1a0800 100%);
+  border: 1px solid #FFD700;
+  box-shadow: 0 0 4px #FFD70080;
+  pointer-events: none;
+}
+
+/* ── Text ─────────────────────────────────────────── */
+.vsb-title {
+  font-size: clamp(14px, 4vw, 17px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 0 10px #00E5FF, 0 0 20px #00E5FF;
+}
+
+/* ── Locked content layout ───────────────────────── */
+.vibe-spinner-locked {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+}
+
+.spinner-lock-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.spinner-locked-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.spinner-locked-title {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: 1;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+}
+
+.spinner-countdown {
+  font-size: 18px;
+  font-weight: 900;
+  color: #00E5FF;
+  text-shadow: 0 0 10px #00E5FF;
+  letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  font-family: 'Space Grotesk', monospace;
+}
+
+/* ── Toast ───────────────────────────────────────── */
+.vsb-locked-toast {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 15, 25, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 8px 16px;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Space Grotesk', sans-serif;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  isolation: isolate;
+  z-index: 200;
+  animation: vsb-toast-in 0.2s ease;
+  pointer-events: none;
+}
+
+@keyframes vsb-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Sparkles ────────────────────────────────────────────── */
+.vsb-sparkle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #fff, 0 0 12px #00E5FF;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.vsb-sp1 {
+  top: -6px;
+  left: 15%;
+  animation: vsb-blink 1.2s infinite alternate;
+}
+
+.vsb-sp2 {
+  bottom: -4px;
+  left: 45%;
+  animation: vsb-blink 1.8s infinite alternate;
+}
+
+.vsb-sp3 {
+  top: 50%;
+  right: -8px;
+  animation: vsb-blink 2.4s infinite alternate;
+}
+
+@keyframes vsb-blink {
+  0%   { opacity: 0; transform: scale(0.5); }
+  100% { opacity: 1; transform: scale(1.2); }
+}

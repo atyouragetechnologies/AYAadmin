@@ -1,0 +1,335 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * AYA design system.
+ * Palette source of truth (brand sheet):
+ *   Russian Violet  #800096
+ *   Vivid Mulberry  #B200D1
+ *   Bright Pink     #FF0084
+ *   Blaze Orange    #FF6A00
+ *   Orange Peel     #FFA200
+ * Environment: deep purple (from the AYA logo), warm yellow mascot, soft white type.
+ * All colors are oklch. Never hardcode colors in components — extend this file.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 14px);
+  --radius-3xl: calc(var(--radius) + 24px);
+  --radius-4xl: calc(var(--radius) + 40px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Brand */
+  --color-violet: var(--brand-violet);
+  --color-mulberry: var(--brand-mulberry);
+  --color-pink: var(--brand-pink);
+  --color-blaze: var(--brand-blaze);
+  --color-peel: var(--brand-peel);
+  --color-ink: var(--brand-ink);
+  --color-surface: var(--brand-surface);
+  --color-surface-2: var(--brand-surface-2);
+
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --radius: 1rem;
+
+  --brand-ink: oklch(0.14 0.09 303);
+  --brand-surface: oklch(0.21 0.11 306);
+  --brand-surface-2: oklch(0.27 0.13 308);
+  --brand-violet: oklch(0.42 0.235 316);
+  --brand-mulberry: oklch(0.55 0.3 313);
+  --brand-pink: oklch(0.64 0.29 355);
+  --brand-blaze: oklch(0.68 0.21 42);
+  --brand-peel: oklch(0.79 0.168 66);
+
+  --background: var(--brand-ink);
+  --foreground: oklch(0.97 0.012 320);
+  --card: oklch(0.24 0.115 307);
+  --card-foreground: oklch(0.97 0.012 320);
+  --popover: oklch(0.24 0.115 307);
+  --popover-foreground: oklch(0.97 0.012 320);
+  --primary: var(--brand-mulberry);
+  --primary-foreground: oklch(0.99 0.005 320);
+  --secondary: oklch(0.28 0.12 308);
+  --secondary-foreground: oklch(0.97 0.012 320);
+  --muted: oklch(0.26 0.1 308);
+  --muted-foreground: oklch(0.76 0.055 314);
+  --accent: var(--brand-peel);
+  --accent-foreground: oklch(0.2 0.09 60);
+  --destructive: oklch(0.62 0.24 20);
+  --destructive-foreground: oklch(0.99 0.005 320);
+  --border: oklch(0.99 0.01 320 / 12%);
+  --input: oklch(0.99 0.01 320 / 16%);
+  --ring: var(--brand-mulberry);
+
+  --gradient-brand: linear-gradient(
+    100deg,
+    var(--brand-mulberry) 0%,
+    var(--brand-pink) 48%,
+    var(--brand-blaze) 78%,
+    var(--brand-peel) 100%
+  );
+  --gradient-heat: linear-gradient(92deg, var(--brand-pink), var(--brand-peel));
+  --gradient-glass: linear-gradient(
+    160deg,
+    oklch(0.99 0.01 320 / 10%) 0%,
+    oklch(0.99 0.01 320 / 2%) 60%
+  );
+  --gradient-aura: radial-gradient(
+    closest-side,
+    oklch(0.55 0.3 313 / 45%),
+    transparent 100%
+  );
+
+  --shadow-depth: 0 30px 70px -30px oklch(0.08 0.08 303 / 85%);
+  --shadow-lift: 0 18px 40px -22px oklch(0.08 0.08 303 / 90%);
+  --shadow-glow: 0 0 60px -10px oklch(0.55 0.3 313 / 45%);
+
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.03em;
+  }
+
+  ::selection {
+    background: var(--brand-mulberry);
+    color: oklch(0.99 0.005 320);
+  }
+}
+
+/* ---------- surfaces ---------- */
+
+@utility glass {
+  background-image: var(--gradient-glass);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-lift);
+}
+
+@utility panel {
+  background-color: var(--brand-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-depth);
+}
+
+@utility text-heat {
+  background-image: var(--gradient-heat);
+  background-clip: text;
+  color: transparent;
+}
+
+@utility text-brand {
+  background-image: var(--gradient-brand);
+  background-clip: text;
+  color: transparent;
+}
+
+@utility aura {
+  position: absolute;
+  background-image: var(--gradient-aura);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+@utility grain {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: radial-gradient(
+      oklch(0.99 0 0) 0.5px,
+      transparent 0.6px
+    );
+    background-size: 4px 4px;
+  }
+}
+
+/* ---------- 3D / depth ---------- */
+
+@utility scene {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+@utility tilt {
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))
+    translateZ(var(--tz, 0px));
+  transition: transform 0.5s var(--ease-soft);
+  will-change: transform;
+}
+
+/* ---------- reveal on scroll ---------- */
+
+@utility reveal {
+  opacity: 0;
+  transform: translate3d(0, 22px, 0);
+  transition:
+    opacity 0.7s var(--ease-soft),
+    transform 0.7s var(--ease-soft);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+@utility reveal-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- mascot life ---------- */
+
+@keyframes aya-float {
+  0%,
+  100% {
+    transform: translate3d(0, -6px, 0) rotate(-1.2deg);
+  }
+  50% {
+    transform: translate3d(0, 8px, 0) rotate(1.2deg);
+  }
+}
+
+@keyframes aya-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.022);
+  }
+}
+
+@keyframes aya-orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aya-spark {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: translateY(0) scale(0.9);
+  }
+  50% {
+    opacity: 0.75;
+    transform: translateY(-14px) scale(1.15);
+  }
+}
+
+@keyframes aya-sweep {
+  0% {
+    transform: translateX(-140%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(240%) skewX(-18deg);
+  }
+}
+
+@keyframes aya-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@utility animate-float {
+  animation: aya-float 7s var(--ease-soft) infinite;
+}
+
+@utility animate-breathe {
+  animation: aya-breathe 4.5s var(--ease-soft) infinite;
+}
+
+@utility animate-orbit {
+  animation: aya-orbit 26s linear infinite;
+}
+
+@utility animate-spark {
+  animation: aya-spark 5s var(--ease-soft) infinite;
+}
+
+@utility animate-sweep {
+  animation: aya-sweep 5.5s var(--ease-soft) infinite;
+}
+
+@utility animate-logo-enter {
+  animation: aya-enter 1s var(--ease-soft) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">At Your Age</string>
+    <string name="title_activity_main">At Your Age</string>
+    <string name="package_name">com.aya.app</string>
+    <string name="custom_url_scheme">com.aya.app</string>
+    <!-- Google Sign-In Client ID from Supabase -->
+    <string name="server_client_id">555026233121-s1rdpvph9chgcsvd1thakfmcl0pvohs5.apps.googleusercontent.com</string>
+</resources>

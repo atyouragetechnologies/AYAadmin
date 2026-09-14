@@ -1,0 +1,129 @@
+.difficulty-slider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(200, 139, 90, 0.05) 0%, rgba(224, 176, 96, 0.05) 100%);
+  border-radius: 12px;
+  margin: 2rem 0;
+  animation: slideUp 0.3s ease-out;
+}
+
+.difficulty-prompt {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #0d1a3a;
+  margin: 0;
+}
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.label-left, .label-right {
+  font-size: 0.9rem;
+  color: #6b7fa3;
+  white-space: nowrap;
+}
+
+.slider {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #e61010, #f0cc88);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #c77b2f;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(199, 123, 47, 0.4);
+  transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  width: 24px;
+  height: 24px;
+  box-shadow: 0 4px 10px rgba(199, 123, 47, 0.6);
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #c77b2f;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(199, 123, 47, 0.4);
+  transition: all 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  width: 24px;
+  height: 24px;
+  box-shadow: 0 4px 10px rgba(199, 123, 47, 0.6);
+}
+
+.difficulty-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #c77b2f;
+  margin: 0;
+  min-height: 1.5rem;
+}
+
+.difficulty-submit-btn {
+  background: linear-gradient(135deg, #1e3a6e 0%, #122050 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.difficulty-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(30, 58, 110, 0.4);
+}
+
+.difficulty-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.difficulty-submitted {
+  text-align: center;
+  padding: 1rem;
+  background: #d4f1d4;
+  color: #2d5a2d;
+  border-radius: 6px;
+  font-weight: 500;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
