@@ -1,0 +1,55 @@
+name: Deploy to Cloudflare Workers
+
+# Auto-deploys the web app to Cloudflare Workers on every push to main.
+# Runtime server secrets (SUPABASE_SERVICE_ROLE_KEY, VAPID_*, etc.) already
+# live as Cloudflare Worker secrets and are NOT needed here. This workflow only
+# needs the build-time VITE_* vars (baked into the frontend bundle by Vite) and
+# the Cloudflare deploy credentials.
+#
+# One-time setup — add these under GitHub repo → Settings → Secrets and
+# variables → Actions → New repository secret:
+#   CLOUDFLARE_API_TOKEN          (Workers deploy token)
+#   CLOUDFLARE_ACCOUNT_ID
+#   VITE_SUPABASE_URL
+#   VITE_SUPABASE_ANON_KEY
+#   VITE_AUTH_SALT
+#   VITE_FIREBASE_API_KEY
+#   VITE_FIREBASE_PROJECT_ID
+#   VITE_VAPID_PUBLIC_KEY         (optional — only if web push is enabled)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-cloudflare-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and deploy to Cloudflare
+        run: npm run deploy:web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_AUTH_SALT: ${{ secrets.VITE_AUTH_SALT }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
