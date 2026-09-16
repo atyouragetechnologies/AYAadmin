@@ -77,3 +77,5 @@ play-store-key.json
 android/local.properties
 android/key.properties
 ios/App/App/capacitor.config.json
+.vercel
+.env*
