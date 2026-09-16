@@ -1,8 +1,8 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Send, AlertTriangle, UserPlus, Trash2, Shield, 
+import {
+    Send, AlertTriangle, UserPlus, Trash2, Shield, Bell,
     Search, BarChart2, Activity, BookOpen, LayoutDashboard, LogOut, Smartphone, RefreshCw, Users,
     Menu, X
 } from 'lucide-react';
@@ -13,6 +13,7 @@ import { StoryMetadataAuthoring } from '../components/admin/StoryMetadataAuthori
 import { StoryRequestsDashboard } from '../components/admin/StoryRequestsDashboard';
 import { InstallAnalyticsDashboard } from '../components/admin/InstallAnalyticsDashboard';
 import { UsersManagementDashboard } from '../components/admin/UsersManagementDashboard';
+import { PushNotificationsDashboard } from '../components/admin/PushNotificationsDashboard';
 
 const FeedbackDashboard = lazy(() => import('../components/admin/FeedbackDashboard').then(m => ({ default: m.FeedbackDashboard })));
 
@@ -22,7 +23,7 @@ export function AdminPanelPage() {
     // Admin auth
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [currentEmail, setCurrentEmail] = useState('');
-    const [activeView, setActiveView] = useState<'overview' | 'users' | 'installs' | 'feedback' | 'stories' | 'operations'>('overview');
+    const [activeView, setActiveView] = useState<'overview' | 'users' | 'installs' | 'feedback' | 'stories' | 'operations' | 'push-notifications'>('overview');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     useEffect(() => {
@@ -237,6 +238,7 @@ export function AdminPanelPage() {
         { id: 'installs', label: 'App Installs', icon: Smartphone },
         { id: 'feedback', label: 'Analytics & Feedback', icon: BarChart2 },
         { id: 'stories', label: 'Story Engine', icon: BookOpen },
+        { id: 'push-notifications', label: 'Push Notifications', icon: Bell },
         { id: 'operations', label: 'Operations & Access', icon: Shield },
     ] as const;
 
@@ -486,6 +488,17 @@ export function AdminPanelPage() {
                                     </div>
                                     <StoryTagsExplorer />
                                     <StoryMetadataAuthoring />
+                                </div>
+                            )}
+
+                            {/* PUSH NOTIFICATIONS */}
+                            {activeView === 'push-notifications' && (
+                                <div className="space-y-6 sm:space-y-8">
+                                    <div className="mb-2">
+                                        <h2 className="text-2xl sm:text-3xl font-black text-white">Push Notifications</h2>
+                                        <p className="text-slate-400 text-xs sm:text-sm">Manage and broadcast notifications to Android (FCM) and Web (PWA) devices.</p>
+                                    </div>
+                                    <PushNotificationsDashboard />
                                 </div>
                             )}
 
