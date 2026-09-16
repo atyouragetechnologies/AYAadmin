@@ -17,9 +17,10 @@ name: Deploy to Cloudflare Workers
 #   VITE_FIREBASE_PROJECT_ID
 #   VITE_VAPID_PUBLIC_KEY         (optional — only if web push is enabled)
 
+# Manual-only: Vercel is the auto-deploy test environment (native Git
+# integration). Cloudflare is FINAL production, promoted on demand via the
+# "Run workflow" button once a commit has been verified on Vercel.
 on:
-  push:
-    branches: [main]
   workflow_dispatch: {}
 
 concurrency:
