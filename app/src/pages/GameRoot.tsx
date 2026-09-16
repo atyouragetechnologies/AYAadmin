@@ -294,6 +294,8 @@ export function GameRoot() {
                     longest_streak: user.longest_streak || 0,
                     stories_completed: user.stories_completed || 0,
                     daily_challenge_completed: user.daily_challenge_completed || false,
+                    daily_free_stories: user.daily_free_stories || 0,
+                    last_story_date: user.last_story_date || undefined,
                     preferred_theme: user.preferred_theme || 'city_dark',
                     access_type: user.access_type,
                     access_start_date: user.access_start_date,
