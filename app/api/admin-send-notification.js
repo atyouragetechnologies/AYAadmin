@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
+import admin from 'firebase-admin';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
@@ -22,6 +23,22 @@ if (publicVapidKey && privateVapidKey) {
         webpush.setVapidDetails(vapidSubject, publicVapidKey, privateVapidKey);
     } catch (error) {
         console.error('[admin-send-notification] Failed to configure VAPID:', error?.name || 'Error');
+    }
+}
+
+if (!admin.apps.length) {
+    try {
+        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+        if (serviceAccountJson) {
+            admin.initializeApp({
+                credential: admin.credential.cert(JSON.parse(serviceAccountJson)),
+                projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'atyourage-e78ff'
+            });
+        } else {
+            console.warn('[admin-send-notification] FIREBASE_SERVICE_ACCOUNT_JSON not found. FCM notifications will fail.');
+        }
+    } catch (e) {
+        console.error('[admin-send-notification] Firebase Admin init error:', e);
     }
 }
 
@@ -84,34 +101,24 @@ async function sendWebPush(subscription, payload) {
 }
 
 async function sendFCMNotification(token, payload) {
-    const fcmServerKey = process.env.FCM_SERVER_KEY || process.env.FIREBASE_SERVER_KEY;
-    if (!fcmServerKey) throw new Error('FCM server key is not configured');
-
-    const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-        method: 'POST',
-        headers: {
-            'Authorization': `key=${fcmServerKey}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            to: token,
-            data: {
-                title: payload.title,
-                body: payload.body,
-                url: payload.url || '/game',
-                channel_id: 'push_notifications_v1'
-            }
-        })
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`FCM error ${response.status}: ${text}`);
+    if (!admin.apps.length) {
+        throw new Error('Firebase Admin SDK is not initialized. Check FIREBASE_SERVICE_ACCOUNT_JSON.');
     }
 
-    const result = await response.json();
-    if (result.failure > 0) {
-        throw new Error('FCM delivery failed');
+    const message = {
+        token: token,
+        data: {
+            title: payload.title,
+            body: payload.body,
+            url: payload.url || '/game',
+            channel_id: 'push_notifications_v1'
+        }
+    };
+
+    try {
+        await admin.messaging().send(message);
+    } catch (error) {
+        throw new Error(`FCM error: ${error.message}`);
     }
 }
 
