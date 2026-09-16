@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
-import { supabase } from '../utils/supabase';
+import { supabase } from '../../utils/supabase';
 
 type Tab = 'overview' | 'send' | 'history' | 'tokens';
 type Platform = 'both' | 'android' | 'web';
@@ -71,7 +71,7 @@ export function PushNotificationsDashboard() {
     const fetchUsers = async () => {
         try {
             const { data } = await supabase.from('users').select('id, username, email').limit(1000);
-            if (data) { const m: Record<string, UserRow> = {}; data.forEach(u => { m[u.id] = u as UserRow; }); setUserMap(m); }
+            if (data) { const m: Record<string, UserRow> = {}; data.forEach((u: any) => { m[u.id] = u as UserRow; }); setUserMap(m); }
         } catch {}
     };
 
