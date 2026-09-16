@@ -14,6 +14,13 @@ const handlers: Record<string, () => Promise<any>> = {
   "/api/set-username": () => import("../app/api/set-username"),
   "/api/subscribe-push": () => import("../app/api/subscribe-push"),
   "/api/verify-cashfree-order": () => import("../app/api/verify-cashfree-order"),
+  // Daily quota system
+  "/api/quota-status": () => import("../app/api/quota-status"),
+  "/api/consume-quota": () => import("../app/api/consume-quota"),
+  "/api/admin/quota-config": () => import("../app/api/admin/quota-config"),
+  "/api/admin/quota-reset-user": () => import("../app/api/admin/quota-reset-user"),
+  "/api/admin/quota-stats": () => import("../app/api/admin/quota-stats"),
+  "/api/admin/user-quota-override": () => import("../app/api/admin/user-quota-override"),
 };
 
 export async function handleApiRequest(request: Request, env: any): Promise<Response | null> {
