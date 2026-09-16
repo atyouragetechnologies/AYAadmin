@@ -6,6 +6,8 @@ if (fs.existsSync(wranglerPath)) {
   let data = fs.readFileSync(wranglerPath, 'utf8');
   // Replace the compatibility date with a safe past date
   data = data.replace(/"compatibility_date"\s*:\s*"[^"]+"/, '"compatibility_date": "2024-04-01"');
+  // Shorten the name to avoid 54-char limit in Cloudflare
+  data = data.replace(/"name"\s*:\s*"[^"]+"/, '"name": "aya-web-app"');
   // Normalize Windows backslashes in directory paths for Cloudflare Wrangler
   data = data.replace(/"directory"\s*:\s*"\.\.\\\\public"/, '"directory": "../public"');
   fs.writeFileSync(wranglerPath, data);

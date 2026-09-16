@@ -1,4 +1,4 @@
-﻿# Logs
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -55,3 +55,27 @@ dummy-web-dir/
 *.docx
 *.winmd
 
+# Secrets & Keys
+.env
+.env.*
+!.env.example
+serviceAccountKey.json
+b2_keys.json
+play-store-key.json
+*.pem
+*.key
+*.cer
+*.cert
+*.p12
+*.pfx
+
+# Platform Access
+.cloudflare-access
+.vercel/
+
+# Mobile Build Secrets
+android/local.properties
+android/key.properties
+ios/App/App/capacitor.config.json
+.vercel
+.env*
