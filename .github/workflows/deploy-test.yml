@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # ==========================================
-      # 1. STARTED NOTIFICATION
+      # 1. SETUP NPM & INSTALL
       # ==========================================
       - name: Prepare commit info
         id: commit_info
@@ -27,29 +27,9 @@ jobs:
           subject=$(printf '%s' "$COMMIT_MESSAGE" | head -n 1 | tr -d '*_`[]')
           echo "message=${subject:-Manual run}" >> "$GITHUB_OUTPUT"
 
-      - name: Telegram Started Notification
-        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
-        continue-on-error: true
-        with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          format: markdown
-          disable_web_page_preview: true
-          message: |
-            🧪 **TEST deploy chalu hui** ⏳
-            test.atyourage.app par jaa rahi hai, PRODUCTION nahi.
-
-            👨‍💻 **Karta-Dharta:** `${{ github.actor }}`
-            📝 **Commit:** `${{ steps.commit_info.outputs.message }}`
-            🔗 **Follow Live:**
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # ==========================================
-      # 2. SETUP NPM & INSTALL
-      # ==========================================
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -60,15 +40,7 @@ jobs:
         run: npm ci
 
       # ==========================================
-      # 3. LINTING (INFORMATIONAL ONLY — SEE deploy.yml)
-      # ==========================================
-      - name: Run Linter
-        id: lint_step
-        continue-on-error: true
-        run: npm run lint
-
-      # ==========================================
-      # 4. BUILD & DEPLOY TO test.atyourage.app
+      # 2. BUILD & DEPLOY TO test.atyourage.app
       # ==========================================
       # NOTE: reuses the SAME repository secrets as production deploy.yml.
       # Test currently shares production's Supabase/Firebase project (no
@@ -93,11 +65,14 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
           VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
-          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.TEST_VITE_VAPID_PUBLIC_KEY }}
           VITE_CDN_URL: ${{ secrets.VITE_CDN_URL }}
 
-      - name: Telegram Deploy Failed
-        if: failure() && steps.deploy_step.outcome == 'failure'
+      # ==========================================
+      # 3. EXACTLY ONE FINAL TELEGRAM MESSAGE
+      # ==========================================
+      - name: Telegram Result Notification
+        if: always()
         uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
         continue-on-error: true
         with:
@@ -106,24 +81,9 @@ jobs:
           format: markdown
           disable_web_page_preview: true
           message: |
-            🧪💀 **TEST deploy fail ho gayi**
-            (Production is safe — ye sirf test.atyourage.app tha)
-
-            👨‍💻 **Galti kiski thi:** `${{ github.actor }}`
-            🚨 **Logs Check Karo:**
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Telegram Success Notification
-        if: success()
-        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
-        continue-on-error: true
-        with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          format: markdown
-          disable_web_page_preview: true
-          message: |
-            🧪✅ **TEST deploy safal — test.atyourage.app live hai**
+            ${{ job.status == 'success' && '🧪✅ *TEST deploy safal* — test.atyourage.app live hai' || job.status == 'cancelled' && '🧪🛑 *TEST deploy cancel ho gayi*' || '🧪💀 *TEST deploy fail ho gayi* (production safe hai)' }}
 
             👨‍💻 **Push kisne mara:** `${{ github.actor }}`
-            🔗 **Branch:** `${{ github.ref_name }}`
+            📝 **Commit:** `${{ steps.commit_info.outputs.message }}`
+            🔗 **Logs:**
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}

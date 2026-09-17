@@ -65,39 +65,7 @@ jobs:
         run: npm ci
 
       # ==========================================
-      # 3. LINTING WITH SPECIFIC FAILURE CATCH
-      # ==========================================
-      # Codebase has never been run through Prettier (99% of lint errors are
-      # prettier/prettier formatting, not real bugs — ~470 real ESLint issues exist
-      # separately). continue-on-error keeps this informational: it still reports via
-      # Telegram (outcome stays 'failure') but no longer blocks the actual deploy.
-      - name: Run Linter
-        id: lint_step
-        continue-on-error: true
-        run: npm run lint
-
-      - name: Telegram Linter Failed
-        # NOT failure() here: lint_step has continue-on-error, so a lint failure no
-        # longer puts the job itself in a failing state — failure() would always be
-        # false and this notification would silently stop firing. Check outcome alone.
-        if: steps.lint_step.outcome == 'failure'
-        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
-        continue-on-error: true
-        with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          format: markdown
-          disable_web_page_preview: true
-          message: |
-            ❌ **Bhai Linter Phat Gaya!** 😭
-            Deploy hone se pehle hi code mein error pakda gaya hai. Syntax check karo!
-
-            👨‍💻 **Galti kiski thi:** `${{ github.actor }}`
-            🚨 **Jaldi Fix Karo:** 
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      # ==========================================
-      # 4. BUILD & DEPLOY WITH SPECIFIC FAILURE CATCH
+      # 3. BUILD & DEPLOY WITH SPECIFIC FAILURE CATCH
       # ==========================================
       - name: Build and Deploy to Cloudflare
         id: deploy_step
@@ -136,10 +104,10 @@ jobs:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       # ==========================================
-      # 5. GENERAL FAILURE CATCH (Just in case)
+      # 4. GENERAL FAILURE CATCH (Just in case)
       # ==========================================
       - name: Telegram Unknown Failure
-        if: failure() && steps.lint_step.outcome != 'failure' && steps.deploy_step.outcome != 'failure'
+        if: failure() && steps.deploy_step.outcome != 'failure'
         uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
         continue-on-error: true
         with:
@@ -149,13 +117,13 @@ jobs:
           disable_web_page_preview: true
           message: |
             ⚠️ **Oof! Kuch Toh Gadbad Hai!** 🤔
-            Deployment fail ho gaya par Linter aur Build theek the. Shayad GitHub Actions mein issue hai!
+            Deployment fail ho gaya lekin build step khud theek tha. Shayad GitHub Actions mein issue hai!
 
             🚨 **Check the damage:** 
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       # ==========================================
-      # 6. CANCELLED SCENARIO
+      # 5. CANCELLED SCENARIO
       # ==========================================
       - name: Telegram Cancelled Notification
         if: cancelled()
@@ -175,7 +143,7 @@ jobs:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       # ==========================================
-      # 7. SUCCESS SCENARIO
+      # 6. SUCCESS SCENARIO
       # ==========================================
       - name: Telegram Success Notification
         if: success()
