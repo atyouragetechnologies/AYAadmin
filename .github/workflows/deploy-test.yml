@@ -1,0 +1,129 @@
+name: Deploy to Cloudflare Workers (Test)
+
+on:
+  push:
+    branches: [test]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cloudflare-test
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # ==========================================
+      # 1. STARTED NOTIFICATION
+      # ==========================================
+      - name: Prepare commit info
+        id: commit_info
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          subject=$(printf '%s' "$COMMIT_MESSAGE" | head -n 1 | tr -d '*_`[]')
+          echo "message=${subject:-Manual run}" >> "$GITHUB_OUTPUT"
+
+      - name: Telegram Started Notification
+        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
+        continue-on-error: true
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          disable_web_page_preview: true
+          message: |
+            🧪 **TEST deploy chalu hui** ⏳
+            test.atyourage.app par jaa rahi hai, PRODUCTION nahi.
+
+            👨‍💻 **Karta-Dharta:** `${{ github.actor }}`
+            📝 **Commit:** `${{ steps.commit_info.outputs.message }}`
+            🔗 **Follow Live:**
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # ==========================================
+      # 2. SETUP NPM & INSTALL
+      # ==========================================
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # ==========================================
+      # 3. LINTING (INFORMATIONAL ONLY — SEE deploy.yml)
+      # ==========================================
+      - name: Run Linter
+        id: lint_step
+        continue-on-error: true
+        run: npm run lint
+
+      # ==========================================
+      # 4. BUILD & DEPLOY TO test.atyourage.app
+      # ==========================================
+      # NOTE: reuses the SAME repository secrets as production deploy.yml.
+      # Test currently shares production's Supabase/Firebase project (no
+      # isolated test database yet) — the IS_TEST_ENVIRONMENT Cloudflare
+      # secret on the atyouragetechnologies-aya-test Worker is what stops
+      # real push notifications from being sent out of this environment.
+      # When an isolated test backend exists, point these at TEST_-prefixed
+      # secrets instead of the shared ones below.
+      - name: Build and Deploy to Cloudflare (test)
+        id: deploy_step
+        run: npm run deploy:testweb
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_AUTH_SALT: ${{ secrets.VITE_AUTH_SALT }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+          VITE_CDN_URL: ${{ secrets.VITE_CDN_URL }}
+
+      - name: Telegram Deploy Failed
+        if: failure() && steps.deploy_step.outcome == 'failure'
+        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
+        continue-on-error: true
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          disable_web_page_preview: true
+          message: |
+            🧪💀 **TEST deploy fail ho gayi**
+            (Production is safe — ye sirf test.atyourage.app tha)
+
+            👨‍💻 **Galti kiski thi:** `${{ github.actor }}`
+            🚨 **Logs Check Karo:**
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Telegram Success Notification
+        if: success()
+        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
+        continue-on-error: true
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          disable_web_page_preview: true
+          message: |
+            🧪✅ **TEST deploy safal — test.atyourage.app live hai**
+
+            👨‍💻 **Push kisne mara:** `${{ github.actor }}`
+            🔗 **Branch:** `${{ github.ref_name }}`
