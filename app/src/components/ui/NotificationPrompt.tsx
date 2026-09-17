@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { 
-    Bell, X, Sparkles, Smartphone, Share2, PlusSquare, ArrowDown, 
+import {
+    Bell, X, Sparkles, Smartphone, Share2, PlusSquare, ArrowDown,
     Check, Monitor, Laptop, ArrowRight, CheckCircle2, ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,9 +27,9 @@ export function NotificationPrompt({ isOpen, onAccept, onDecline }: Notification
     const deviceInfo = detectDeviceInfo();
 
     const handleAcceptAll = async () => {
-        try { audioSynth.playClick(); } catch {}
+        try { audioSynth.playClick(); } catch { }
         setIsProcessing(true);
-        
+
         // 1. Enable Push Notifications
         let notifGranted = false;
         try {
@@ -78,8 +78,8 @@ export function NotificationPrompt({ isOpen, onAccept, onDecline }: Notification
     };
 
     const handleInstallOnly = async () => {
-        try { audioSynth.playClick(); } catch {}
-        
+        try { audioSynth.playClick(); } catch { }
+
         if (alreadyInstalled) {
             await recordAppInstall('standalone_verified');
             setViewMode('success');
@@ -109,13 +109,13 @@ export function NotificationPrompt({ isOpen, onAccept, onDecline }: Notification
     };
 
     const handleManualInstallConfirmed = async (sourceMethod: 'ios_guide' | 'desktop_guide' | 'android_guide') => {
-        try { audioSynth.playClick(); } catch {}
+        try { audioSynth.playClick(); } catch { }
         await recordAppInstall(sourceMethod);
         setViewMode('success');
     };
 
     const handleClose = () => {
-        try { audioSynth.playClick(); } catch {}
+        try { audioSynth.playClick(); } catch { }
         setViewMode('main');
         onDecline();
     };
@@ -123,7 +123,7 @@ export function NotificationPrompt({ isOpen, onAccept, onDecline }: Notification
     return (
         <AnimatePresence>
             <div data-aya-modal="notification-prompt" className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md select-none">
-                <motion.div 
+                <motion.div
                     initial={{ scale: 0.9, opacity: 0, y: 20 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -175,7 +175,7 @@ export function NotificationPrompt({ isOpen, onAccept, onDecline }: Notification
                             <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-white mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                                 Level Up Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">AYA Streak</span> 🔥
                             </h2>
-                            
+
                             <p className="text-slate-300 text-sm sm:text-base mb-6 leading-relaxed">
                                 Never miss your daily historical dilemma and keep your streak and psychometric DNA evolving!
                             </p>
@@ -218,11 +218,11 @@ export function NotificationPrompt({ isOpen, onAccept, onDecline }: Notification
                                 >
                                     <Sparkles size={18} className="text-slate-950" />
                                     <span>
-                                        {isProcessing 
+                                        {isProcessing
                                             ? 'ACTIVATING...'
                                             : !alreadyInstalled
-                                            ? (isIos ? 'TURN ON & ADD TO HOMESCREEN 📲' : 'TURN ON & INSTALL APP 📲')
-                                            : 'YES, REMIND ME 🔔'}
+                                                ? (isIos ? 'TURN ON & ADD TO HOMESCREEN 📲' : 'TURN ON & INSTALL APP 📲')
+                                                : 'YES, REMIND ME 🔔'}
                                     </span>
                                 </button>
 
@@ -238,7 +238,7 @@ export function NotificationPrompt({ isOpen, onAccept, onDecline }: Notification
                                         </span>
                                     </button>
                                 )}
-                                
+
                                 <button
                                     onClick={handleClose}
                                     className="w-full py-2.5 text-slate-500 hover:text-slate-300 font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 text-xs cursor-pointer"

@@ -5,6 +5,13 @@
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+// Same package.json version used for OTA/game versioning (see app/vite.config.ts) —
+// this is the single source of truth for the whole app.
+const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf-8"));
+const APP_VERSION = pkg.version || "1.0.0";
 
 export default defineConfig({
   tanstackStart: {
@@ -13,6 +20,9 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    define: {
+      "import.meta.env.VITE_APP_VERSION": JSON.stringify(APP_VERSION),
+    },
     server: {
       watch: {
         ignored: [

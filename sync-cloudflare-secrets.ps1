@@ -1,6 +1,16 @@
 # Parse the .env file and sync required secrets to Cloudflare Workers
+param(
+    # Defaults to production. Pass -ProjectName atyouragetechnologies-aya-test
+    # to sync the same secrets to the test.atyourage.app Worker instead.
+    [string]$ProjectName = "atyouragetechnologies-aya-admin"
+)
+
 $envPath = ".\.env"
-$projectName = "atyouragetechnologies-aya-admin"
+# This MUST match a real Worker name — verified via the Cloudflare API
+# (accounts/{id}/workers/domains) which Worker each Custom Domain is bound to.
+# Production is "atyouragetechnologies-aya-admin" (atyourage.app / www).
+# "aya-web-app" was a past mistake: an unrelated, unbound Worker.
+$projectName = $ProjectName
 
 if (-Not (Test-Path $envPath)) {
     Write-Host "Error: .env file not found!" -ForegroundColor Red
@@ -32,8 +42,13 @@ $keysToSync = @(
     "VAPID_SUBJECT",
     "CASHFREE_APP_ID",
     "CASHFREE_SECRET_KEY",
-    "CASHFREE_ENVIRONMENT"
+    "CASHFREE_ENVIRONMENT",
+    "VITE_CDN_URL",
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_CHAT_ID"
 )
+
+$secretsJson = @{}
 
 foreach ($line in Get-Content $envPath -Encoding UTF8) {
     if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#")) {
@@ -51,12 +66,22 @@ foreach ($line in Get-Content $envPath -Encoding UTF8) {
         }
 
         if ($keysToSync -contains $key) {
-            Write-Host "Syncing secret: $key" -ForegroundColor Yellow
-            # Pipe the value directly into wrangler
-            $value | npx wrangler secret put $key --name $projectName
-            Write-Host "Successfully synced $key" -ForegroundColor Green
+            $secretsJson[$key] = $value
         }
     }
 }
 
-Write-Host "All secrets synced! Your Cloudflare Workers now have access to your Supabase keys." -ForegroundColor Green
+if ($secretsJson.Count -gt 0) {
+    Write-Host "Syncing $($secretsJson.Count) secrets in bulk..." -ForegroundColor Yellow
+    $tempFile = "temp_secrets.json"
+    $secretsJson | ConvertTo-Json -Depth 10 | Set-Content $tempFile -Encoding UTF8
+    
+    # Use the bulk command to avoid rate limiting
+    npx wrangler secret bulk $tempFile --name $projectName
+    
+    # Clean up the temp file
+    Remove-Item $tempFile
+    Write-Host "All secrets synced in a single request! Your Cloudflare Workers now have access to your Supabase keys." -ForegroundColor Green
+} else {
+    Write-Host "No valid secrets found to sync." -ForegroundColor Red
+}

@@ -10,7 +10,22 @@ import fs from 'fs'
 const rootPkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf-8'));
 const APP_VERSION = rootPkg.version || '1.0.0';
 
-
+// Read the native Android shell version straight from build.gradle so the admin panel
+// can show what's configured, independent of the OTA content version above.
+function readAndroidVersion() {
+  try {
+    const gradle = fs.readFileSync(path.resolve(__dirname, '../android/app/build.gradle'), 'utf-8');
+    const nameMatch = gradle.match(/versionName\s+"([^"]+)"/);
+    const codeMatch = gradle.match(/versionCode\s+(\d+)/);
+    return {
+      name: nameMatch?.[1] || 'unknown',
+      code: codeMatch?.[1] || 'unknown',
+    };
+  } catch {
+    return { name: 'unknown', code: 'unknown' };
+  }
+}
+const ANDROID_VERSION = readAndroidVersion();
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -19,6 +34,8 @@ export default defineConfig({
   define: {
     // Expose app version from package.json at build time
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(APP_VERSION),
+    'import.meta.env.VITE_ANDROID_VERSION_NAME': JSON.stringify(ANDROID_VERSION.name),
+    'import.meta.env.VITE_ANDROID_VERSION_CODE': JSON.stringify(ANDROID_VERSION.code),
   },
   plugins: [
     react(),

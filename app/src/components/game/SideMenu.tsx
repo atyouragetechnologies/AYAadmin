@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { useUserStore } from '../../store/userStore';
 import { calculateLevelInfo } from '../../utils/levelSystem';
 import { WishlistStar } from './WishlistStar';
+import { OTA_APP_VERSION } from '../../utils/version';
 
 export const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeDetoZR6GVdJpc69T4PidFqgza_nag9U-1YlA5MRMaB9zr-g/viewform?usp=sharing&ouid=104192189976318098996';
 
@@ -547,7 +548,7 @@ export function SideMenu({
                 <button
                     onClick={toggleMenu}
                     className={clsx(
-                        "w-full flex items-center justify-center gap-2 p-4 mt-auto mb-safe rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg active:scale-95",
+                        "w-full flex items-center justify-center gap-2 p-4 mt-auto rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg active:scale-95",
                         isCandyMode
                             ? "bg-pink-500 text-white hover:bg-pink-600 shadow-pink-500/30"
                             : "bg-gradient-to-r from-red-600 to-rose-700 text-white hover:brightness-110 shadow-red-900/50"
@@ -556,6 +557,10 @@ export function SideMenu({
                     <X size={20} strokeWidth={3} />
                     Close Menu
                 </button>
+
+                <div className={clsx("text-center text-[10px] font-bold tracking-wider mt-2 mb-safe", isCandyMode ? "text-slate-400" : "text-slate-600")}>
+                    v{OTA_APP_VERSION}
+                </div>
                 </div>
             </div>
         </div>

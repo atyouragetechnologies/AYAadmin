@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, ArrowLeft, ArrowUpRight, Instagram, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { APP_VERSION } from "@/lib/appVersion";
 import {
   CAREER_FIELDS,
   DISCOVERY_FACETS,
@@ -946,6 +947,9 @@ export function Footer() {
             LAUNCH APP <ArrowUpRight className="size-4" />
           </motion.a>
         </div>
+      </div>
+      <div className="mt-8 text-center text-xs text-muted-foreground/60">
+        v{APP_VERSION}
       </div>
     </footer>
   );

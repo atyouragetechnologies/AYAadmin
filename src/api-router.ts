@@ -11,8 +11,11 @@ const handlers: Record<string, () => Promise<any>> = {
   "/api/recommend-stories": () => import("../app/api/recommend-stories"),
   "/api/recommendations": () => import("../app/api/recommendations"),
   "/api/send-notifications": () => import("../app/api/send-notifications"),
+  "/api/admin-send-notification": () => import("../app/api/admin-send-notification"),
+  "/api/fcm-tokens": () => import("../app/api/fcm-tokens"),
   "/api/set-username": () => import("../app/api/set-username"),
   "/api/subscribe-push": () => import("../app/api/subscribe-push"),
+  "/api/wishlist-telegram-notify": () => import("../app/api/wishlist-telegram-notify"),
   "/api/verify-cashfree-order": () => import("../app/api/verify-cashfree-order"),
   // Daily quota system
   "/api/quota-status": () => import("../app/api/quota-status"),

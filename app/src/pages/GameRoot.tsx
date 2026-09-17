@@ -255,7 +255,7 @@ export function GameRoot() {
 
                 // ── STEP 1: Build level scores from game_sessions and user table ──
                 const restoredScores: Record<string, number> = {};
-                
+
                 // 1a. Grab from users table as primary fallback (since game_sessions insert might fail)
                 if (user && user.level_scores) {
                     const dbScores = typeof user.level_scores === 'string'
@@ -376,8 +376,8 @@ export function GameRoot() {
 
                 if (Object.keys(restoredScores).length > 0) {
                     // Apply scores by merging with local state (so we don't wipe progress if DB failed to save previously)
-                    useUserStore.setState((state) => ({ 
-                        levelScores: { ...state.levelScores, ...restoredScores } 
+                    useUserStore.setState((state) => ({
+                        levelScores: { ...state.levelScores, ...restoredScores }
                     }));
                     // Force-mark levels as completed in the levels array directly
                     useUserStore.setState((state) => ({
@@ -385,7 +385,7 @@ export function GameRoot() {
                             const dbScore = restoredScores[l.id];
                             const localScore = state.levelScores[l.id];
                             const bestScore = Math.max(dbScore || 0, localScore || 0);
-                            
+
                             if (bestScore > 0) {
                                 return { ...l, status: 'completed', stars: bestScore };
                             }
@@ -404,7 +404,7 @@ export function GameRoot() {
                         })
                     }));
                 }
-                
+
                 console.log('[Session] ✓ Force-applied', Object.keys(restoredScores).length, 'completed levels to map');
 
                 clearTimeout(maxWait);
@@ -439,7 +439,7 @@ export function GameRoot() {
 
     useEffect(() => {
         if (sessionStatus !== 'found' || !profile) return;
-        
+
         // Skip on initial onboarding / assessment steps
         if (!profile.assessmentCompleted || location.pathname.startsWith('/game/onboarding') || location.pathname.startsWith('/game/assessment')) {
             return;
@@ -516,25 +516,24 @@ export function GameRoot() {
         location.pathname.startsWith('/game/admin');
 
     return (
-        <div className={`relative w-full font-sans bg-slate-900 text-slate-100 ${
-            isScrollableRoute
+        <div className={`relative w-full font-sans bg-slate-900 text-slate-100 ${isScrollableRoute
                 ? 'min-h-[100dvh] overflow-y-auto overflow-x-hidden scroll-smooth'
                 : 'h-[100dvh] overflow-hidden'
-        }`}>
+            }`}>
             <SupabaseChecker />
-            <SubscriptionModal 
-                isOpen={showSubscriptionModal} 
-                onClose={() => setShowSubscriptionModal(false)} 
+            <SubscriptionModal
+                isOpen={showSubscriptionModal}
+                onClose={() => setShowSubscriptionModal(false)}
             />
             <Outlet />
-            <NotificationPrompt 
+            <NotificationPrompt
                 isOpen={showDailyNotifPrompt}
                 onAccept={handleAcceptDailyNotif}
                 onDecline={handleDeclineDailyNotif}
             />
             {pendingStreakData && (
                 <div className="absolute inset-0 z-[9999]">
-                    <StreakCelebration 
+                    <StreakCelebration
                         streak={pendingStreakData.newStreak}
                         xpEarned={pendingStreakData.xpEarned}
                         isMilestone={pendingStreakData.isMilestone}

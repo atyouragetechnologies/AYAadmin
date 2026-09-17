@@ -55,7 +55,20 @@ export class VercelResponsePolyfill {
   }
 }
 
+// Nitro's Cloudflare adapter (node_modules/nitro/dist/presets/cloudflare/runtime/_module-handler.mjs)
+// stashes the real bindings/secrets on `globalThis.__env__` and does NOT reliably
+// forward a populated `env` through to this SSR entry's fetch(request, env, ctx) —
+// the `env` argument that reaches here can be an empty object. `globalThis.__env__`
+// is the actual source of truth; fall back to the passed-in `env` only if that
+// global is unavailable (e.g. local dev without the Cloudflare adapter).
+function resolveRealEnv(passedEnv: any): any {
+  const globalEnv = (globalThis as any).__env__;
+  if (globalEnv && Object.keys(globalEnv).length > 0) return globalEnv;
+  return passedEnv || {};
+}
+
 export async function createVercelRequest(request: Request, env: any) {
+  env = resolveRealEnv(env);
   const url = new URL(request.url);
   
   let body = {};
@@ -98,13 +111,20 @@ export async function createVercelRequest(request: Request, env: any) {
 export function executeVercelHandler(handler: Function, request: Request, env: any): Promise<Response> {
   return new Promise(async (resolve, reject) => {
     try {
-      const vReq = await createVercelRequest(request, env);
-      
-      // Polyfill process.env for Cloudflare Workers environment
+      const realEnv = resolveRealEnv(env);
+      const vReq = await createVercelRequest(request, realEnv);
+
+      // Polyfill process.env for Cloudflare Workers environment.
+      // NOTE: the build (Nitro) rewrites bare `process` references in every
+      // app/api/*.js handler into `import processModule from "node:process"`.
+      // Writing to `globalThis.process` here targets a DIFFERENT object than
+      // that import, so handlers never actually saw injected secrets — inject
+      // into the same node:process module instance instead.
+      const { default: nodeProcess } = await import("node:process");
+      Object.assign(nodeProcess.env, realEnv);
       if (typeof globalThis.process === "undefined") {
-        (globalThis as any).process = { env: {} };
+        (globalThis as any).process = nodeProcess;
       }
-      Object.assign(globalThis.process.env, env);
 
       const vRes = new VercelResponsePolyfill(resolve);
       

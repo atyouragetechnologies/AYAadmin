@@ -1,28 +1,45 @@
-import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
-
-let supabase;
-try {
-  if (supabaseUrl && supabaseKey) {
-    supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
-  }
-} catch (error) {
-  console.error('[send-notifications] Supabase init error:', error);
+// 'web-push' is loaded lazily (not statically imported) because its asn1.js
+// dependency throws ("buffer.hasOwnProperty is not a function") the instant the
+// module is evaluated under Cloudflare Workers — a static top-level import
+// crashes this entire endpoint before any handler code runs.
+let webpushModule = null;
+let webpushLoadError = null;
+async function getWebpush() {
+    if (webpushModule) return webpushModule;
+    if (webpushLoadError) throw webpushLoadError;
+    try {
+        webpushModule = (await import('web-push')).default;
+        const publicVapidKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY;
+        const privateVapidKey = process.env.VAPID_PRIVATE_KEY;
+        const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:support@aya-game.com';
+        webpushModule.setVapidDetails(vapidSubject, publicVapidKey, privateVapidKey);
+        return webpushModule;
+    } catch (error) {
+        webpushLoadError = error;
+        throw error;
+    }
 }
 
-const publicVapidKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY;
-const privateVapidKey = process.env.VAPID_PRIVATE_KEY;
-const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:support@aya-game.com';
+let supabase = null;
+let initialized = false;
 
-if (publicVapidKey && privateVapidKey) {
-  try {
-    webpush.setVapidDetails(vapidSubject, publicVapidKey, privateVapidKey);
-  } catch (error) {
-    console.error('[send-notifications] Failed to configure VAPID:', error?.name || 'Error');
-  }
+function initServices() {
+    if (initialized) return;
+
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+
+    try {
+        if (supabaseUrl && supabaseKey && !supabase) {
+            supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+        }
+    } catch (error) {
+        console.error('[send-notifications] Supabase init error:', error);
+    }
+
+    initialized = true;
 }
 
 const FOUNDER_EMAIL = 'anitadhakad333@gmail.com';
@@ -123,8 +140,12 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-email');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  
+  initServices();
+
   if (!supabase) return res.status(500).json({ error: 'Supabase client is not configured on the server.' });
-  if (!publicVapidKey || !privateVapidKey) {
+  const hasVapidKeys = !!(process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY) && !!process.env.VAPID_PRIVATE_KEY;
+  if (!hasVapidKeys) {
     console.error('[send-notifications] VAPID keys are not configured.');
     return res.status(500).json({ success: false, error: 'VAPID configuration error: server keys must be configured.' });
   }
@@ -154,20 +175,30 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, total: 0, failed: 0, summary: emptySummary(), failures: [], message: 'No push subscriptions found in database' });
     }
 
+    // Test deployment shares production's Supabase data (no isolated test project
+    // yet), so it must never actually deliver to a real device — only the
+    // deploy:testweb Worker has IS_TEST_ENVIRONMENT set.
+    const isTestEnv = process.env.IS_TEST_ENVIRONMENT === 'true';
+    if (isTestEnv) {
+      console.log(`[send-notifications] TEST ENVIRONMENT — skipping real delivery to ${subscriptions.length} real subscription(s).`);
+      return res.status(200).json({ success: true, dryRun: true, total: subscriptions.length, sent: 0, failed: 0, summary: emptySummary(), failures: [], message: 'TEST environment — no real notification was sent to any device.' });
+    }
+
     const payload = JSON.stringify({ title, body, url, icon: '/icons/icon-192.png' });
     const deliveries = await Promise.all(subscriptions.map(async (sub) => {
       try {
         if (!sub.subscription?.endpoint) throw new Error('Invalid subscription object: endpoint is missing');
+        const webpush = await getWebpush();
         await webpush.sendNotification(sub.subscription, payload);
         return { sent: true };
       } catch (error) {
         const failure = pushErrorDetails(sub, error);
-        if (failure.category === 'expired') {
+        if (failure.category === 'expired' || failure.category === 'authentication') {
           const { error: deleteError } = await supabase.from('push_subscriptions').delete().eq('id', sub.id);
           failure.removed = !deleteError;
           if (deleteError) {
             failure.errorMessage = `${failure.errorMessage}; automatic removal failed: ${redactSensitiveText(deleteError.message)}`;
-            console.error('[send-notifications] Failed to remove expired subscription:', { subscriptionId: sub.id, error: redactSensitiveText(deleteError.message) });
+            console.error('[send-notifications] Failed to remove invalid subscription:', { subscriptionId: sub.id, error: redactSensitiveText(deleteError.message) });
           }
         }
         console.error('[send-notifications] Push delivery failed:', failure);

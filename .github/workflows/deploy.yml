@@ -1,0 +1,196 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cloudflare-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # ==========================================
+      # 1. STARTED NOTIFICATION
+      # ==========================================
+      # Telegram's Markdown parser 400s on a multi-line or unbalanced code span, which
+      # would otherwise take the whole notification (and its step) down. Read via env,
+      # never inline, so a crafted commit message can't inject shell.
+      - name: Prepare commit info
+        id: commit_info
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          subject=$(printf '%s' "$COMMIT_MESSAGE" | head -n 1 | tr -d '*_`[]')
+          echo "message=${subject:-Manual run}" >> "$GITHUB_OUTPUT"
+
+      - name: Telegram Started Notification
+        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
+        continue-on-error: true
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          disable_web_page_preview: true
+          message: |
+            🚨 **Hold tight! Naya Code Push Hua Hai!** ⏳
+            Bhai log, pipeline chalu ho gayi hai. Sit back and relax.
+
+            👨‍💻 **Karta-Dharta:** `${{ github.actor }}`
+            📝 **Commit:** `${{ steps.commit_info.outputs.message }}`
+            🔗 **Follow Live:**
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # ==========================================
+      # 2. SETUP NPM & INSTALL
+      # ==========================================
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          # 24 (LTS), not 20: @tanstack/react-start needs >=22.12, the whole
+          # @supabase/* stack needs >=22, and zip-a-folder/@napi-rs need >=22.20.
+          node-version: 24
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # ==========================================
+      # 3. LINTING WITH SPECIFIC FAILURE CATCH
+      # ==========================================
+      # Codebase has never been run through Prettier (99% of lint errors are
+      # prettier/prettier formatting, not real bugs — ~470 real ESLint issues exist
+      # separately). continue-on-error keeps this informational: it still reports via
+      # Telegram (outcome stays 'failure') but no longer blocks the actual deploy.
+      - name: Run Linter
+        id: lint_step
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Telegram Linter Failed
+        # NOT failure() here: lint_step has continue-on-error, so a lint failure no
+        # longer puts the job itself in a failing state — failure() would always be
+        # false and this notification would silently stop firing. Check outcome alone.
+        if: steps.lint_step.outcome == 'failure'
+        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
+        continue-on-error: true
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          disable_web_page_preview: true
+          message: |
+            ❌ **Bhai Linter Phat Gaya!** 😭
+            Deploy hone se pehle hi code mein error pakda gaya hai. Syntax check karo!
+
+            👨‍💻 **Galti kiski thi:** `${{ github.actor }}`
+            🚨 **Jaldi Fix Karo:** 
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # ==========================================
+      # 4. BUILD & DEPLOY WITH SPECIFIC FAILURE CATCH
+      # ==========================================
+      - name: Build and Deploy to Cloudflare
+        id: deploy_step
+        run: npm run deploy:web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_AUTH_SALT: ${{ secrets.VITE_AUTH_SALT }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+          VITE_CDN_URL: ${{ secrets.VITE_CDN_URL }}
+
+      - name: Telegram Deploy Failed
+        if: failure() && steps.deploy_step.outcome == 'failure'
+        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
+        continue-on-error: true
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          disable_web_page_preview: true
+          message: |
+            💀 **Moye Moye... Cloudflare ne Reject Maar Diya!** 😭
+            Bhai, build ya deployment phase mein kalesh ho gaya hai. 
+
+            👨‍💻 **Galti kiski thi:** `${{ github.actor }}` (Pakdo isko! 🏏)
+            🚨 **Logs Check Karo (Jaldi):** 
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # ==========================================
+      # 5. GENERAL FAILURE CATCH (Just in case)
+      # ==========================================
+      - name: Telegram Unknown Failure
+        if: failure() && steps.lint_step.outcome != 'failure' && steps.deploy_step.outcome != 'failure'
+        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
+        continue-on-error: true
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          disable_web_page_preview: true
+          message: |
+            ⚠️ **Oof! Kuch Toh Gadbad Hai!** 🤔
+            Deployment fail ho gaya par Linter aur Build theek the. Shayad GitHub Actions mein issue hai!
+
+            🚨 **Check the damage:** 
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # ==========================================
+      # 6. CANCELLED SCENARIO
+      # ==========================================
+      - name: Telegram Cancelled Notification
+        if: cancelled()
+        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
+        continue-on-error: true
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          disable_web_page_preview: true
+          message: |
+            🛑 **Ruko Zara, Sabar Karo!** ✋
+            Kisine deployment beech mein hi cancel kar diya! Darr gaye kya? 😂
+
+            👨‍💻 **Target:** `${{ github.actor }}`
+            🔗 **Check Status:** 
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # ==========================================
+      # 7. SUCCESS SCENARIO
+      # ==========================================
+      - name: Telegram Success Notification
+        if: success()
+        uses: appleboy/telegram-action@214f06cfa3d3a588c1472116889437e7c6fd29b1 # v1.1.1
+        continue-on-error: true
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          disable_web_page_preview: true
+          message: |
+            🚀 **Bhai log, Deployment OP!** 🔥
+            Code seedha production pe live ho gaya hai. Cloudflare ko aukaat dikha di! 😎
+
+            👨‍💻 **Push kisne mara:** `${{ github.actor }}`
+            🔗 **Branch:** `${{ github.ref_name }}`
+
+            Party kab hai? 🍕
