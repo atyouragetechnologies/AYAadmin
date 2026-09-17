@@ -84,3 +84,6 @@ GoogleService-Info.plist
 android/app/google-services.json
 android/app/release-key.jks
 android/keystore.properties
+
+# Stray worktree gitlink caused 'git submodule foreach' to fail in CI (exit 128, harmless but noisy)
+.claude/worktrees/
