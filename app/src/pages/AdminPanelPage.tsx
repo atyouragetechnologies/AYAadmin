@@ -1,8 +1,8 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Send, AlertTriangle, UserPlus, Trash2, Shield, Bell,
+    AlertTriangle, UserPlus, Trash2, Shield, Bell,
     Search, BarChart2, Activity, BookOpen, LayoutDashboard, LogOut, Smartphone, RefreshCw, Users,
     Menu, X, Tag
 } from 'lucide-react';
@@ -70,25 +70,14 @@ export function AdminPanelPage() {
     }, []);
 
     // Operations State
-    const [title, setTitle] = useState('');
-    const [body, setBody] = useState('');
-    const [notifStatus, setNotifStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-    const [notifMessage, setNotifMessage] = useState('');
-    
-    
-    
     const [adminList, setAdminList] = useState<{ id: string; email: string }[]>([]);
     const [newAdminEmail, setNewAdminEmail] = useState('');
     const [adminStatus, setAdminStatus] = useState<'idle' | 'adding' | 'success' | 'error'>('idle');
     const [adminMessage, setAdminMessage] = useState('');
-    
-    const [subCount, setSubCount] = useState<number | null>(null);
-    const [subCheckLoading, setSubCheckLoading] = useState(false);
 
     useEffect(() => {
         if (isAdmin && activeView === 'operations') {
             loadAdmins();
-            handleCheckSubs();
         }
     }, [isAdmin, activeView]);
 
@@ -135,75 +124,6 @@ export function AdminPanelPage() {
             await loadAdmins();
         } catch (err: any) {
             setAdminStatus('error'); setAdminMessage(err.message || 'Failed to remove admin.');
-        }
-    };
-
-    const handleCheckSubs = async () => {
-        setSubCheckLoading(true);
-        try {
-            // Direct query to Supabase push_subscriptions table
-            const { count, error } = await supabase
-                .from('push_subscriptions')
-                .select('*', { count: 'exact', head: true });
-
-            if (!error && typeof count === 'number') {
-                setSubCount(count);
-            } else {
-                // Fallback attempt via API if deployed with serverless functions
-                const res = await fetch('/api/subscribe-push', { 
-                    headers: { 'x-admin-email': currentEmail } 
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setSubCount(data.count ?? 0);
-                } else {
-                    const { data: list } = await supabase.from('push_subscriptions').select('id');
-                    setSubCount(list ? list.length : 0);
-                }
-            }
-        } catch (err) {
-            console.warn('[AdminPanel] handleCheckSubs fallback:', err);
-            try {
-                const { data: list } = await supabase.from('push_subscriptions').select('id');
-                setSubCount(list ? list.length : 0);
-            } catch {
-                setSubCount(0);
-            }
-        } finally {
-            setSubCheckLoading(false);
-        }
-    };
-
-    const handleBroadcast = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!title.trim() || !body.trim()) {
-            setNotifStatus('error'); setNotifMessage('Title and body are required.'); return;
-        }
-        setNotifStatus('sending');  
-        try {
-            const res = await fetch('/api/send-notifications', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-email': currentEmail },
-                body: JSON.stringify({ title, body, url: '/game' }),
-            });
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || `HTTP ${res.status}`);
-            }
-            const data = await res.json();
-            
-            
-            
-            if (data.sent === 0 && data.total === 0) {
-                setNotifStatus('error'); setNotifMessage('No registered devices found.');
-            } else if (data.failed > 0) {
-                setNotifStatus('error'); setNotifMessage('Broadcast completed with some failures. See report.');
-            } else {
-                setNotifStatus('success'); setNotifMessage(`Successfully broadcasted to ${data.sent} device(s)!`);
-                setTitle(''); setBody('');
-            }
-        } catch (err: any) {
-            setNotifStatus('error'); setNotifMessage(err.message || 'An unexpected error occurred.');
         }
     };
 
@@ -509,75 +429,8 @@ export function AdminPanelPage() {
                                 <div className="space-y-6 sm:space-y-8 max-w-4xl">
                                     <div className="mb-2">
                                         <h2 className="text-2xl sm:text-3xl font-black text-white">Operations & Access</h2>
-                                        <p className="text-slate-400 text-xs sm:text-sm">Broadcast push notifications and manage admin privileges.</p>
+                                        <p className="text-slate-400 text-xs sm:text-sm">Manage admin privileges. (Push notifications moved to the dedicated "Push Notifications" tab.)</p>
                                     </div>
-
-                                    <form onSubmit={handleBroadcast} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl">
-                                        <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                            <Send size={18} className="text-indigo-400" /> Push Notifications
-                                        </h3>
-                                        
-                                        <div className="space-y-5">
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Title</label>
-                                                <input
-                                                    type="text" value={title} onChange={e => setTitle(e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
-                                                    placeholder="e.g. New Story Unlocked!" maxLength={50}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Message Body</label>
-                                                <textarea
-                                                    value={body} onChange={e => setBody(e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all min-h-[100px] resize-y"
-                                                    placeholder="e.g. Tap here to discover your future archetype..." maxLength={150}
-                                                />
-                                            </div>
-
-                                            <div className="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl">
-                                                <div>
-                                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Registered Devices</p>
-                                                    <p className="text-lg font-black text-white flex items-center gap-2">
-                                                        <span>{subCheckLoading ? 'Checking...' : subCount === null ? '—' : subCount}</span>
-                                                        {typeof subCount === 'number' && subCount > 0 && (
-                                                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                                                                Active
-                                                            </span>
-                                                        )}
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    type="button" onClick={handleCheckSubs} disabled={subCheckLoading}
-                                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-lg transition-all disabled:opacity-50 cursor-pointer"
-                                                >
-                                                    {subCheckLoading ? 'Checking...' : 'Refresh Count'}
-                                                </button>
-                                            </div>
-
-                                            <AnimatePresence>
-                                                {notifStatus !== 'idle' && (
-                                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                                                        className={`p-4 rounded-xl border text-sm font-medium ${
-                                                            notifStatus === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
-                                                            notifStatus === 'error' ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' :
-                                                            'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
-                                                        }`}
-                                                    >
-                                                        {notifStatus === 'sending' ? 'Broadcasting out to devices...' : notifMessage}
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-
-                                            <button 
-                                                type="submit" disabled={notifStatus === 'sending'}
-                                                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] disabled:opacity-50"
-                                            >
-                                                {notifStatus === 'sending' ? 'SENDING...' : 'BROADCAST NOTIFICATION'}
-                                            </button>
-                                        </div>
-                                    </form>
 
                                     <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl">
                                         <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
