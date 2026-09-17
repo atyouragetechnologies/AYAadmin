@@ -48,6 +48,22 @@ $keysToSync = @(
     "TELEGRAM_CHAT_ID"
 )
 
+# Keys that are DELIBERATELY isolated per environment (each has its own value
+# set directly via `wrangler secret put`, not from .env). Never let a bulk
+# sync from the shared .env clobber these back to production's value on the
+# test Worker. Supabase and the B2/CDN keys are intentionally NOT here —
+# those stay shared between test and production.
+$isolatedPerEnvironment = @(
+    "VAPID_PUBLIC_KEY",
+    "VITE_VAPID_PUBLIC_KEY",
+    "VAPID_PRIVATE_KEY"
+)
+
+if ($projectName -eq "atyouragetechnologies-aya-test") {
+    Write-Host "Test Worker detected: skipping isolated-per-environment keys ($($isolatedPerEnvironment -join ', '))" -ForegroundColor DarkYellow
+    $keysToSync = $keysToSync | Where-Object { $isolatedPerEnvironment -notcontains $_ }
+}
+
 $secretsJson = @{}
 
 foreach ($line in Get-Content $envPath -Encoding UTF8) {
