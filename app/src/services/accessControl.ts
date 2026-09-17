@@ -12,6 +12,9 @@
 import { PRICING_CONFIG } from '../config/recommendationConfig';
 import type { UserProfile } from '../types/gameTypes';
 
+// Free-tier users may play this many stories per calendar day (UTC-based date key).
+export const FREE_DAILY_STORY_LIMIT = 2;
+
 export function isAyaPlusUser(profile?: UserProfile | null): boolean {
     if (!profile) return false;
     const accessType = profile.access_type || 'free';
@@ -19,14 +22,14 @@ export function isAyaPlusUser(profile?: UserProfile | null): boolean {
 }
 
 export function getRemainingFreeStories(profile?: UserProfile | null): number {
-    if (!profile) return 3;
+    if (!profile) return FREE_DAILY_STORY_LIMIT;
     if (isAyaPlusUser(profile)) return 999;
-    
+
     const today = new Date().toISOString().split('T')[0];
     if (profile.last_story_date === today) {
-        return Math.max(0, 3 - (profile.daily_free_stories || 0));
+        return Math.max(0, FREE_DAILY_STORY_LIMIT - (profile.daily_free_stories || 0));
     }
-    return 3;
+    return FREE_DAILY_STORY_LIMIT;
 }
 
 export function canPlayStory(profile: UserProfile | null, isStoryPremium: boolean = false): { allowed: boolean, reason?: 'limit_reached' | 'premium_only' } {
