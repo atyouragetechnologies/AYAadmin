@@ -13,7 +13,7 @@ import { PRICING_CONFIG } from '../config/recommendationConfig';
 import type { UserProfile } from '../types/gameTypes';
 
 // Free-tier users may play this many stories per calendar day (UTC-based date key).
-export const FREE_DAILY_STORY_LIMIT = 2;
+export const FREE_DAILY_STORY_LIMIT = 3;
 
 export function isAyaPlusUser(profile?: UserProfile | null): boolean {
     if (!profile) return false;
