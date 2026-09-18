@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 import { getSession } from '../utils/session';
-import { supabase } from '../utils/supabase';
+import { upsertUserProfile } from '../lib/firestore';
 import { logJourneyEvent } from '../utils/feedbackUtils';
 
 export const AnalyticsTracker = () => {
@@ -25,10 +25,9 @@ export const AnalyticsTracker = () => {
 
                     if (elapsedSeconds >= 30 && elapsedSeconds <= 300) {
                         const today = new Date().toISOString().split('T')[0];
-                        supabase.from('users').update({ 
-                            last_active_date: today,
-                            updated_at: new Date().toISOString()
-                        }).eq('id', session.userId).catch(() => {});
+                        upsertUserProfile(session.userId, { 
+                            lastActiveDate: today,
+                        }).catch(() => {});
 
                         logJourneyEvent(session.userId, 'app_session', 'session_heartbeat', {
                             duration_seconds: elapsedSeconds,

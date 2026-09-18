@@ -21,6 +21,7 @@ This is the **AYA (At Your Age)** app. Key facts every agent must know:
 - **Database:** Supabase (`hstddacoqsmztmbvvhhr`) — never query directly from components
 - **Assets CDN:** `https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/`
 - **Package manager:** Bun
+- **Deployment:** Deploys to **Cloudflare** via **GitHub Actions**. Do NOT assume this is a Vercel deployment despite the repo folder name. Do NOT push or commit directly to deploy without permission.
 
 ### Story System (3-file rule)
 To add/edit a story, you MUST update ALL THREE files with the same `scenarioId`:

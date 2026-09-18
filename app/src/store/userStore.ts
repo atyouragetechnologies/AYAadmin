@@ -3,10 +3,11 @@ import { persist } from 'zustand/middleware';
 import type { UserProfile, Level, Lesson, PersonalityTraits, PsychologicalProfile } from '../types/gameTypes';
 import { calculateLevelInfo } from '../utils/levelSystem';
 import { safeStorage } from '../utils/storage';
-import { supabase } from '../utils/supabase';
+import { upsertUserProfile, upsertPersonalityProfile, logAnalyticsEvent } from '../lib/firestore';
+import { auth } from '../lib/firebase';
 import { generateLevels } from '../utils/levelGenerator';
 
-import { logJourneyEvent } from '../utils/feedbackUtils';
+// logJourneyEvent removed — analytics now go through Firebase (logAnalyticsEvent)
 
 export type MapTheme = 'city_dark' | 'solar' | 'light';
 
@@ -34,7 +35,7 @@ interface UserState {
     checkStreak: () => void;
     completeDailyChallenge: (skipSync?: boolean) => { xpEarned: number, oldStreak: number, newStreak: number, isMilestone: boolean };
 
-    /** Manually flush the current store state to the Supabase backend. */
+    /** Manually flush the current store state to the Firestore backend. */
     forceSync: () => void;
 
     // Personality System Actions
@@ -110,91 +111,62 @@ interface UserState {
     unlockLevel: (levelId: string) => void;
 }
 const syncStoreToBackend = async (profile: any, currentLevelScores: Record<string, number>) => {
-    if (!profile || !profile.id || profile.id.startsWith('offline-')) return;
-    try {
-        const { error: userError } = await supabase.from('users').update({
-            total_xp: profile.total_xp,
-            level: profile.level,
-            stories_completed: profile.stories_completed,
-            current_streak: profile.current_streak,
-            longest_streak: profile.longest_streak,
-            last_active_date: profile.last_active_date,
-            daily_challenge_completed: profile.daily_challenge_completed,
-            level_scores: currentLevelScores,
-            onboarding_scores: profile.onboarding_scores,
-            gameplay_scores: profile.gameplay_scores,
-            story_count: profile.story_count,
-            tutorial_completed: profile.tutorial_completed,
-            topic_survey_completed: profile.topic_survey_completed,
-            music_volume: profile.music_volume,
-            sfx_volume: profile.sfx_volume,
-            is_music_muted: profile.is_music_muted,
-            is_sfx_muted: profile.is_sfx_muted,
-            daily_free_stories: profile.daily_free_stories,
-            last_story_date: profile.last_story_date,
-        }).eq('id', profile.id);
+    // Use Firebase UID (auth.currentUser.uid). Profile.id is also the Firebase UID post-migration.
+    const uid = auth.currentUser?.uid ?? profile?.auth_user_id ?? profile?.id;
+    if (!uid || uid.startsWith('offline-')) return;
 
-        if (userError) {
-            console.error('[Store] Supabase users update error:', userError);
-            // Fallback: Try updating without level_scores and new columns in case they haven't been created yet
-            const { error: fallbackError } = await supabase.from('users').update({
-                total_xp: profile.total_xp,
-                level: profile.level,
-                stories_completed: profile.stories_completed,
-                current_streak: profile.current_streak,
-                longest_streak: profile.longest_streak,
-                last_active_date: profile.last_active_date,
-                daily_challenge_completed: profile.daily_challenge_completed,
-            }).eq('id', profile.id);
-            if (fallbackError) {
-                 console.error('[Store] Fallback users update also failed:', fallbackError);
-            } else {
-                 console.log('[Store] ✓ Successfully saved profile to backend (fallback, without new columns)');
-            }
-        } else {
-            console.log('[Store] ✓ Successfully saved profile to backend');
-        }
+    try {
+        await upsertUserProfile(uid, {
+            totalXp: profile.total_xp,
+            level: profile.level,
+            storiesCompleted: profile.stories_completed,
+            storyCount: profile.story_count,
+            currentStreak: profile.current_streak,
+            longestStreak: profile.longest_streak,
+            lastActiveDate: profile.last_active_date,
+            dailyChallengeCompleted: profile.daily_challenge_completed,
+            levelScores: currentLevelScores,
+            onboardingScores: profile.onboarding_scores,
+            gameplayScores: profile.gameplay_scores,
+            tutorialCompleted: profile.tutorial_completed,
+            topicSurveyCompleted: profile.topic_survey_completed,
+            musicVolume: profile.music_volume,
+            sfxVolume: profile.sfx_volume,
+            isMusicMuted: profile.is_music_muted,
+            isSfxMuted: profile.is_sfx_muted,
+            dailyFreeStories: profile.daily_free_stories,
+            lastStoryDate: profile.last_story_date,
+        });
+        console.log('[Store] ✓ Successfully saved profile to Firebase');
 
         if (profile.traits) {
-            const riskVal = Math.round(profile.traits.risk ?? 50);
-            const creativeVal = Math.round(profile.traits.creativity ?? 50);
-            const analyticalVal = Math.round(profile.traits.vision ?? profile.traits.analytical ?? 50);
-            const socialVal = Math.round(profile.traits.empathy ?? profile.traits.social ?? 50);
-            const ambitiousVal = Math.round(profile.traits.leadership ?? profile.traits.ambitious ?? 50);
-
-            const ppPayload = {
-                user_id: profile.id,
-                total_xp: profile.total_xp || 0,
+            await upsertPersonalityProfile(uid, {
+                traitRiskTaker: Math.round(profile.traits.risk ?? 50),
+                traitCreative: Math.round(profile.traits.creativity ?? 50),
+                traitAnalytical: Math.round(profile.traits.vision ?? profile.traits.analytical ?? 50),
+                traitSocial: Math.round(profile.traits.empathy ?? profile.traits.social ?? 50),
+                traitAmbitious: Math.round(profile.traits.leadership ?? profile.traits.ambitious ?? 50),
+                totalXp: profile.total_xp || 0,
                 level: profile.level || 1,
-                stories_completed: profile.stories_completed || 0,
-                trait_risk_taker: riskVal,
-                trait_creative: creativeVal,
-                trait_analytical: analyticalVal,
-                trait_social: socialVal,
-                trait_ambitious: ambitiousVal,
-                last_updated: new Date().toISOString()
-            };
+                storiesCompleted: profile.stories_completed || 0,
+            });
 
-            const { error: traitError } = await supabase
-                .from('personality_profiles')
-                .upsert(ppPayload, { onConflict: 'user_id' });
-
-            if (traitError) {
-                console.warn('[Store] Supabase traits upsert failed, trying update:', traitError);
-                await supabase.from('personality_profiles').update(ppPayload).eq('user_id', profile.id);
-            }
-
-            // High-reliability backend audit log for DNA telemetry
-            logJourneyEvent(profile.id, 'dna_module', 'dna_sync', {
-                traits: profile.traits,
-                total_xp: profile.total_xp,
-                level: profile.level,
-                stories_completed: profile.stories_completed,
-                synced_at: new Date().toISOString()
-            }).catch(() => {});
+            // Log DNA sync as analytics event
+            logAnalyticsEvent('journey_events', {
+                userId: uid,
+                journeyId: 'dna_module',
+                eventType: 'dna_sync',
+                eventData: {
+                    traits: profile.traits,
+                    totalXp: profile.total_xp,
+                    level: profile.level,
+                    storiesCompleted: profile.stories_completed,
+                    syncedAt: new Date().toISOString(),
+                },
+            });
         }
     } catch (err) {
-        console.error('[Store] Failed to sync to backend', err);
+        console.error('[Store] Failed to sync to Firebase', err);
     }
 };
 
@@ -324,7 +296,12 @@ export const useUserStore = create<UserState>()(
                 }));
                 const pid = get().profile?.id;
                 if (pid && !pid.startsWith('offline-')) {
-                    supabase.from('users').update({ music_volume: vol }).eq('id', pid).catch(() => {});
+                    const uid = auth.currentUser?.uid ?? pid;
+                    if (uid) {
+                        import('../lib/firestore').then(({ upsertUserProfile }) =>
+                            upsertUserProfile(uid, { musicVolume: vol }).catch(() => {})
+                        );
+                    }
                 }
             },
             setSfxVolume: (vol) => {
@@ -334,7 +311,12 @@ export const useUserStore = create<UserState>()(
                 }));
                 const pid = get().profile?.id;
                 if (pid && !pid.startsWith('offline-')) {
-                    supabase.from('users').update({ sfx_volume: vol }).eq('id', pid).catch(() => {});
+                    const uid = auth.currentUser?.uid ?? pid;
+                    if (uid) {
+                        import('../lib/firestore').then(({ upsertUserProfile }) =>
+                            upsertUserProfile(uid, { sfxVolume: vol }).catch(() => {})
+                        );
+                    }
                 }
             },
             toggleMusicMute: () => {
@@ -342,7 +324,12 @@ export const useUserStore = create<UserState>()(
                     const next = !state.isMusicMuted;
                     const pid = state.profile?.id;
                     if (pid && !pid.startsWith('offline-')) {
-                        supabase.from('users').update({ is_music_muted: next }).eq('id', pid).catch(() => {});
+                        const uid = auth.currentUser?.uid ?? pid;
+                        if (uid) {
+                            import('../lib/firestore').then(({ upsertUserProfile }) =>
+                                upsertUserProfile(uid, { isMusicMuted: next }).catch(() => {})
+                            );
+                        }
                     }
                     return {
                         isMusicMuted: next,
@@ -355,7 +342,12 @@ export const useUserStore = create<UserState>()(
                     const next = !state.isSfxMuted;
                     const pid = state.profile?.id;
                     if (pid && !pid.startsWith('offline-')) {
-                        supabase.from('users').update({ is_sfx_muted: next }).eq('id', pid).catch(() => {});
+                        const uid = auth.currentUser?.uid ?? pid;
+                        if (uid) {
+                            import('../lib/firestore').then(({ upsertUserProfile }) =>
+                                upsertUserProfile(uid, { isSfxMuted: next }).catch(() => {})
+                            );
+                        }
                     }
                     return {
                         isSfxMuted: next,
@@ -415,28 +407,21 @@ export const useUserStore = create<UserState>()(
             },
 
             syncLevels: async () => {
-                const { data, error } = await supabase.from('levels').select('*');
-                if (error || !data || data.length === 0) {
-                    console.warn('[Store] Failed to fetch levels from Supabase or table empty. Using local fallback.');
-                    try {
-                        const { generateLevels } = await import('../utils/levelGenerator');
-                        const ageToUse = get().profile?.age || 18;
-                        const fallbackLevels = generateLevels(ageToUse);
-                        set({ levels: fallbackLevels });
-                        console.log('[Store] Fallback levels generated:', fallbackLevels.length);
-                    } catch (err) {
-                        console.error("Failed to load local fallback levels", err);
-                    }
-                    return;
-                }
+                try {
+                    const { getAllLevels } = await import('../lib/firestore');
+                    const data = await getAllLevels();
 
-                const latestMasterLevels: Level[] = data.map((row: any) => ({
+                    if (!data || data.length === 0) {
+                        throw new Error('No levels in Firestore, using local fallback');
+                    }
+
+                    const latestMasterLevels: Level[] = data.map((row: any) => ({
                     id: row.id,
-                    day_number: row.day_number,
+                    day_number: row.dayNumber ?? row.day_number,
                     title: row.title,
                     description: row.description,
                     personality: row.personality,
-                    requiredStars: row.required_stars,
+                    requiredStars: row.requiredStars ?? row.required_stars,
                     year: row.year,
                     age: row.age,
                     theme: row.theme,
@@ -445,11 +430,11 @@ export const useUserStore = create<UserState>()(
                     fame: row.fame,
                     achievements: row.achievements,
                     lesson: row.lesson,
-                    avatarUrl: row.avatar_url,
-                    scenarioId: row.scenario_id,
-                    idolTraits: row.idol_traits,
+                    avatarUrl: row.avatarUrl ?? row.avatar_url,
+                    scenarioId: row.scenarioId ?? row.scenario_id,
+                    idolTraits: row.idolTraits ?? row.idol_traits,
                     status: row.status,
-                    isLocked: row.is_locked,
+                    isLocked: row.isLocked ?? row.is_locked,
                     stars: row.stars,
                     part1: row.part1,
                     part2: row.part2,
@@ -507,7 +492,20 @@ export const useUserStore = create<UserState>()(
 
                     return { levels: mergedLevels };
                 });
+                } catch (err) {
+                    console.warn('[Store] Failed to fetch levels from Firestore. Using local fallback.', err);
+                    try {
+                        const { generateLevels } = await import('../utils/levelGenerator');
+                        const ageToUse = get().profile?.age || 18;
+                        const fallbackLevels = generateLevels(ageToUse);
+                        set({ levels: fallbackLevels });
+                        console.log('[Store] Fallback levels generated:', fallbackLevels.length);
+                    } catch (fallbackErr) {
+                        console.error('[Store] Failed to load local fallback levels', fallbackErr);
+                    }
+                }
             },
+
 
             // Daily Challenge & Streak Logic
             checkStreak: () => {

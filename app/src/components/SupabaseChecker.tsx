@@ -1,5 +1,12 @@
+/**
+ * FirebaseChecker.tsx (formerly SupabaseChecker)
+ *
+ * Checks Firebase/Firestore connectivity at startup and shows a banner if failed.
+ * Replaces the old Supabase connectivity checker.
+ */
 import { useEffect, useState } from 'react';
-import { supabase } from '../utils/supabase';
+import { db } from '../lib/firestore';
+import { collection, getDocs, limit, query } from 'firebase/firestore';
 
 export function SupabaseChecker() {
     const [status, setStatus] = useState<'checking' | 'ok' | 'error' | 'no-env'>('checking');
@@ -7,37 +14,21 @@ export function SupabaseChecker() {
 
     useEffect(() => {
         const checkConnection = async () => {
-            const url = import.meta.env.VITE_SUPABASE_URL;
-            const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            
-            if (!url || !key || url === '' || key === '') {
+            const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+
+            if (!projectId) {
                 setStatus('no-env');
-                setDetails('VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing in Environment Variables. Nothing will save.');
+                setDetails('VITE_FIREBASE_PROJECT_ID is missing in Environment Variables. Firestore will not work.');
                 return;
             }
 
             try {
-                const { error } = await supabase.from('users').select('id, level_scores').limit(1);
-                if (error) {
-                    if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
-                        setStatus('error');
-                        setDetails(`Supabase API Key is invalid or expired. Error: ${error.message}`);
-                    } else if (error.code === '42P01') {
-                         setStatus('error');
-                         setDetails(`Supabase connected, but users table is missing! Please run the SQL migrations.`);
-                    } else if (error.code === '42703' || error.message?.includes('level_scores')) {
-                         setStatus('error');
-                         setDetails(`CRITICAL: The 'level_scores' column is missing from your users table! Please run the SQL migration to add it.`);
-                    } else {
-                        setStatus('error');
-                        setDetails(`Supabase connected but returned error: ${error.message}`);
-                    }
-                } else {
-                    setStatus('ok');
-                }
+                // Try reading one doc from the users collection to verify connectivity
+                await getDocs(query(collection(db, 'users'), limit(1)));
+                setStatus('ok');
             } catch (err: any) {
                 setStatus('error');
-                setDetails(`Network error connecting to Supabase: ${err.message}`);
+                setDetails(`Firebase/Firestore connection failed: ${err.message}`);
             }
         };
 

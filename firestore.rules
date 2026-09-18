@@ -1,17 +1,134 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ota_config: publicly readable by Android app to check for OTA updates
-    // Only writable via ota-push.mjs server script (REST API)
-    match /ota_config/{doc} {
-      allow read: if true;
-      allow write: if false;
+    // ─────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Default deny all other collections
-    match /{document=**} {
-      allow read, write: if false;
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        (
+          exists(/databases/$(database)/documents/admin_users/$(request.auth.token.email)) ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        );
+    }
+
+    // ─────────────────────────────────────────────
+    // USERS
+    // ─────────────────────────────────────────────
+    match /users/{uid} {
+      // Anyone signed in can read public profile (for social features)
+      allow read: if isSignedIn();
+      // Only owner can write their own profile
+      allow create, update: if isOwner(uid);
+      allow delete: if isAdmin();
+
+      // Sub-collections — only owner can access
+      match /sessions/{sessionId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /personality/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /quiz_responses/{responseId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /checkins/{checkinId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /reflections/{reflectionId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /fcm_tokens/{platform} {
+        allow read, write: if isOwner(uid);
+      }
+      match /subscription/{docId} {
+        allow read: if isOwner(uid);
+        // Subscriptions can only be written by server (admin SDK) or admin
+        allow write: if isAdmin();
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // SOCIAL: FOLLOW REQUESTS
+    // ─────────────────────────────────────────────
+    match /follow_requests/{requestId} {
+      // Both parties can read
+      allow read: if isSignedIn() &&
+        (resource.data.requesterId == request.auth.uid ||
+         resource.data.recipientId == request.auth.uid);
+
+      // Only requester can create
+      allow create: if isSignedIn() &&
+        request.resource.data.requesterId == request.auth.uid;
+
+      // Only recipient can update (accept/reject)
+      allow update: if isSignedIn() &&
+        resource.data.recipientId == request.auth.uid;
+
+      // Either party can delete
+      allow delete: if isSignedIn() &&
+        (resource.data.requesterId == request.auth.uid ||
+         resource.data.recipientId == request.auth.uid);
+    }
+
+    // ─────────────────────────────────────────────
+    // SOCIAL: FOLLOWS
+    // ─────────────────────────────────────────────
+    match /follows/{followId} {
+      // Anyone signed in can read (social graph is semi-public)
+      allow read: if isSignedIn();
+      // Only created via server transaction (no direct client writes)
+      allow create: if isSignedIn() &&
+        request.resource.data.followerId == request.auth.uid;
+      // Follower can unfollow (delete)
+      allow delete: if isSignedIn() &&
+        resource.data.followerId == request.auth.uid;
+      allow update: if false; // Immutable
+    }
+
+    // ─────────────────────────────────────────────
+    // CONTENT (read-only from client)
+    // ─────────────────────────────────────────────
+    match /levels/{levelId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /scenarios/{scenarioId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /story_metadata/{scenarioId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────
+    // ADMIN USERS
+    // ─────────────────────────────────────────────
+    match /admin_users/{email} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────
+    // ANALYTICS (write-only from client, read by admin)
+    // ─────────────────────────────────────────────
+    match /analytics/{collection}/events/{eventId} {
+      allow create: if isSignedIn();
+      allow read: if isAdmin();
+      allow update, delete: if false;
     }
   }
 }

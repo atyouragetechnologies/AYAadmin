@@ -4,7 +4,7 @@ import { Compass, X, ArrowRight, ShieldCheck, Tag } from 'lucide-react';
 import { safetyService } from '../../services/safetyService';
 import { CrisisSupportModal } from './CrisisSupportModal';
 import { useUserStore } from '../../store/userStore';
-import { supabase } from '../../utils/supabase';
+import { logAnalyticsEvent } from '../../lib/firestore';
 import { audioManager } from '../../utils/audioManager';
 
 interface ProblemCheckInModalProps {
@@ -66,11 +66,11 @@ export function ProblemCheckInModal({ isOpen, onClose, onProblemSubmitted }: Pro
         // 2. Persist to database if authenticated
         if (profile?.id && !profile.id.startsWith('offline-')) {
             try {
-                await supabase.from('problem_checkins').insert({
-                    user_id: profile.id,
-                    situation_text: situationText || (selectedTheme ? selectedTheme.replace(/_/g, ' ') : 'General Navigation'),
-                    situation_tags: selectedTags,
-                    life_stage: profile.age ? (profile.age < 18 ? 'teens' : profile.age < 23 ? 'college' : 'early_career') : 'general',
+                logAnalyticsEvent('problem_checkins', {
+                    userId: profile.id,
+                    situationText: situationText || (selectedTheme ? selectedTheme.replace(/_/g, ' ') : 'General Navigation'),
+                    situationTags: selectedTags,
+                    lifeStage: profile.age ? (profile.age < 18 ? 'teens' : profile.age < 23 ? 'college' : 'early_career') : 'general',
                 });
             } catch (err) {
                 console.warn('[ProblemCheckIn] DB insert warning:', err);

@@ -5,7 +5,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
-import { supabase } from '../../utils/supabase';
+import { auth } from '../../lib/firebase';
+import { db } from '../../lib/firestore';
+import { collection, getDocs, query as fsQuery, orderBy, where, limit } from 'firebase/firestore';
 
 type Tab = 'overview' | 'send' | 'history' | 'tokens';
 type Platform = 'both' | 'android' | 'web';
@@ -45,8 +47,8 @@ export function PushNotificationsDashboard() {
         setLoading(true);
         try {
             setWebLoading(true);
-            const { data: w } = await supabase.from('push_subscriptions').select('*').order('created_at', { ascending: false });
-            if (w) setSubs(w);
+            const subSnap = await getDocs(fsQuery(collection(db, 'push_subscriptions'), orderBy('createdAt', 'desc')));
+            setSubs(subSnap.docs.map(d => ({ id: d.id, ...d.data() } as Sub)));
             setWebLoading(false);
 
             setFcmLoading(true);
@@ -70,18 +72,25 @@ export function PushNotificationsDashboard() {
 
     const fetchUsers = async () => {
         try {
-            const { data } = await supabase.from('users').select('id, username, email').limit(1000);
-            if (data) { const m: Record<string, UserRow> = {}; data.forEach((u: any) => { m[u.id] = u as UserRow; }); setUserMap(m); }
+            const snap = await getDocs(fsQuery(collection(db, 'users'), limit(1000)));
+            const m: Record<string, UserRow> = {};
+            snap.docs.forEach(d => { m[d.id] = { id: d.id, username: d.data().username || null, email: d.data().email || null }; });
+            setUserMap(m);
         } catch {}
     };
 
     const fetchHistory = async () => {
         setHistLoading(true);
         try {
-            let q = supabase.from('notification_history').select('*').order('sent_at', { ascending: false });
-            if (histRange !== 'all') { const d = histRange === '7d' ? 7 : 30; const c = new Date(); c.setDate(c.getDate() - d); q = q.gte('sent_at', c.toISOString()); }
-            const { data, error } = await q;
-            if (!error) setHistory(data || []);
+            let q = fsQuery(collection(db, 'notification_history'), orderBy('sentAt', 'desc'));
+            if (histRange !== 'all') {
+                const d = histRange === '7d' ? 7 : 30;
+                const c = new Date();
+                c.setDate(c.getDate() - d);
+                q = fsQuery(collection(db, 'notification_history'), where('sentAt', '>=', c.toISOString()), orderBy('sentAt', 'desc'));
+            }
+            const snap = await getDocs(q);
+            setHistory(snap.docs.map(d => ({ id: d.id, ...d.data() } as Hist)));
         } catch {}
         setHistLoading(false);
     };
@@ -92,8 +101,7 @@ export function PushNotificationsDashboard() {
         setSending(true);
         setResult(null);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const adminEmail = session?.user?.email || null;
+            const adminEmail = auth.currentUser?.email || null;
             const res = await fetch('/api/admin-send-notification', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

@@ -1,18 +1,16 @@
-import { supabase } from './supabase';
+import { auth } from '../lib/firebase';
+import { getUserProfile } from '../lib/firestore';
 
 /**
  * Check if the currently authenticated user is an admin.
- * 
- * Uses the secure is_admin_user RPC which checks the public.users table.
+ * Checks the isAdmin flag on the user's Firestore profile.
  */
 export async function checkIsAdmin(): Promise<boolean> {
     try {
-        const { data: isAdmin, error } = await supabase.rpc('is_admin_user');
-        if (error) {
-            console.error('[AdminCheck] RPC error:', error.message);
-            return false;
-        }
-        return !!isAdmin;
+        const user = auth.currentUser;
+        if (!user) return false;
+        const profile = await getUserProfile(user.uid);
+        return !!(profile as any)?.isAdmin;
     } catch (err) {
         console.error('[AdminCheck] Failed:', err);
         return false;

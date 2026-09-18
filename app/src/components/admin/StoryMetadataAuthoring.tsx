@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../utils/supabase';
+import { db } from '../../lib/firestore';
+import { collection, query, where, getDocs, setDoc, doc } from 'firebase/firestore';
 import { Save, Check, BookOpen } from 'lucide-react';
 import { CHECKIN_TAGS } from '../../config/recommendationConfig';
 import type { DnaTrait, ResolutionArchetype } from '../../types/ayaTypes';
@@ -54,14 +55,13 @@ export function StoryMetadataAuthoring() {
 
     const loadMetadataForStory = async (storyId: string) => {
         try {
-            const { data } = await supabase.from('story_metadata').select('*').eq('scenario_id', storyId).maybeSingle();
+            const snap = await getDocs(query(collection(db, 'story_metadata'), where('scenario_id', '==', storyId)));
+            const data = snap.empty ? null : snap.docs[0].data();
             if (data) {
-                // Using existing states but mapping to new schema columns
                 setResolutionArchetype(data.dilemma_type || 'persist');
                 setDifficulty(data.difficulty === 'hard' ? 5 : data.difficulty === 'easy' ? 1 : 3);
                 setIsPremium(data.is_premium || false);
                 setSelectedSituations(data.situational_tags || []);
-                // Fallbacks for fields not in new schema to avoid breaking UI state
                 setDominantTrait('risk');
                 setWhyTemplate(data.reflection_prompt || '');
                 setSelectedEmotions([]);
@@ -70,7 +70,6 @@ export function StoryMetadataAuthoring() {
                     setTraitAffinity({ ...traitAffinity, ...data.target_traits });
                 }
             } else {
-                // Reset to defaults
                 setSelectedSituations([]);
                 setSelectedEmotions([]);
                 setWhyTemplate('');
@@ -107,10 +106,7 @@ export function StoryMetadataAuthoring() {
         };
 
         try {
-            const { error } = await supabase
-                .from('story_metadata')
-                .upsert(payload, { onConflict: 'scenario_id' });
-            if (error) throw error;
+            await setDoc(doc(db, 'story_metadata', selectedStoryId), payload, { merge: true });
             setSaveStatus('saved');
             setTimeout(() => setSaveStatus('idle'), 2500);
         } catch (err) {

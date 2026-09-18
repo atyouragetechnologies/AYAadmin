@@ -1,0 +1,322 @@
+# AYA — Firebase Data Connect Schema
+# Maps exactly to the existing Supabase PostgreSQL schema in app/full_schema.sql
+# Uses Firebase Data Connect GraphQL SDL syntax
+
+# ─────────────────────────────────────────────
+# CORE USER PROFILE
+# ─────────────────────────────────────────────
+type User @table(name: "users", singular: "user", plural: "users") {
+  id: UUID! @col(name: "id") @default(expr: "uuidV4()")
+  authUid: String @col(name: "auth_uid") @unique  # Firebase Auth UID (replaces Supabase auth_user_id)
+  mobile: String @col(name: "mobile")
+  email: String @col(name: "email")
+  username: String @col(name: "username")
+  name: String @col(name: "name")
+  age: Int @col(name: "age")
+  accessType: String @col(name: "access_type")
+  accessStartDate: Date @col(name: "access_start_date")
+  preferredTheme: String @col(name: "preferred_theme")
+  preferredMap: String @col(name: "preferred_map")
+  totalXp: Int @col(name: "total_xp") @default(expr: "0")
+  level: Int @col(name: "level") @default(expr: "1")
+  storiesCompleted: Int @col(name: "stories_completed") @default(expr: "0")
+  storyCount: Int @col(name: "story_count") @default(expr: "0")
+  currentStreak: Int @col(name: "current_streak") @default(expr: "0")
+  longestStreak: Int @col(name: "longest_streak") @default(expr: "0")
+  lastActiveDate: Date @col(name: "last_active_date")
+  dailyFreeStories: Int @col(name: "daily_free_stories") @default(expr: "0")
+  lastStoryDate: Date @col(name: "last_story_date")
+  dailyChallengeCompleted: Boolean @col(name: "daily_challenge_completed") @default(expr: "false")
+  dailyChallengePersonality: String @col(name: "daily_challenge_personality")
+  dailyStruggle: String @col(name: "daily_struggle")
+  lastStruggleUpdate: Timestamp @col(name: "last_struggle_update")
+  levelScores: Any @col(name: "level_scores") @default(expr: "{}")   # JSONB stored as JSON
+  onboardingScores: Any @col(name: "onboarding_scores")
+  gameplayScores: Any @col(name: "gameplay_scores")
+  onboardingComplete: Boolean @col(name: "onboarding_complete") @default(expr: "false")
+  assessmentCompleted: Boolean @col(name: "assessment_completed") @default(expr: "false")
+  isAdmin: Boolean @col(name: "is_admin") @default(expr: "false")
+  status: String @col(name: "status") @default(expr: "'active'")
+  deletedAt: Timestamp @col(name: "deleted_at")
+  tutorialCompleted: Boolean @col(name: "tutorial_completed") @default(expr: "false")
+  topicSurveyCompleted: Boolean @col(name: "topic_survey_completed") @default(expr: "false")
+  musicVolume: Float @col(name: "music_volume")
+  sfxVolume: Float @col(name: "sfx_volume")
+  isMusicMuted: Boolean @col(name: "is_music_muted") @default(expr: "false")
+  isSfxMuted: Boolean @col(name: "is_sfx_muted") @default(expr: "false")
+  createdAt: Timestamp @col(name: "created_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# PERSONALITY / DNA PROFILE
+# ─────────────────────────────────────────────
+type PersonalityProfile @table(name: "personality_profiles") {
+  id: UUID! @default(expr: "uuidV4()")
+  user: User! @ref(fields: "userId", references: "id")
+  userId: UUID! @col(name: "user_id")
+  mobile: String @col(name: "mobile")
+  traitRiskTaker: Int @col(name: "trait_risk_taker") @default(expr: "50")
+  traitCreative: Int @col(name: "trait_creative") @default(expr: "50")
+  traitAnalytical: Int @col(name: "trait_analytical") @default(expr: "50")
+  traitSocial: Int @col(name: "trait_social") @default(expr: "50")
+  traitAmbitious: Int @col(name: "trait_ambitious") @default(expr: "50")
+  futureArchetype: String @col(name: "future_archetype")
+  futureArchetypeScore: Float @col(name: "future_archetype_score")
+  interestGoal: String @col(name: "interest_goal")
+  interestStruggle: String @col(name: "interest_struggle")
+  interestDomain: String @col(name: "interest_domain")
+  lifeResilience: Int @col(name: "life_resilience") @default(expr: "50")
+  lifeDiscipline: Int @col(name: "life_discipline") @default(expr: "50")
+  lifeCourage: Int @col(name: "life_courage") @default(expr: "50")
+  lifeCreativity: Int @col(name: "life_creativity") @default(expr: "50")
+  lifeEmotionalControl: Int @col(name: "life_emotional_control") @default(expr: "50")
+  lifeLeadership: Int @col(name: "life_leadership") @default(expr: "50")
+  lifeRiskIntelligence: Int @col(name: "life_risk_intelligence") @default(expr: "50")
+  lifeConsistency: Int @col(name: "life_consistency") @default(expr: "50")
+  totalXp: Int @col(name: "total_xp") @default(expr: "0")
+  level: Int @col(name: "level") @default(expr: "1")
+  storiesCompleted: Int @col(name: "stories_completed") @default(expr: "0")
+  lastUpdated: Timestamp @col(name: "last_updated")
+  createdAt: Timestamp @col(name: "created_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# GAME SESSIONS (Story Completion Log)
+# ─────────────────────────────────────────────
+type GameSession @table(name: "game_sessions") {
+  id: UUID! @default(expr: "uuidV4()")
+  user: User! @ref(fields: "userId", references: "id")
+  userId: UUID! @col(name: "user_id")
+  scenarioId: String @col(name: "scenario_id")
+  levelId: String @col(name: "level_id")
+  selectedPersonality: String @col(name: "selected_personality")
+  matchScore: Int @col(name: "match_score")
+  stars: Int @col(name: "stars")
+  score: Int @col(name: "score")
+  feedback: String @col(name: "feedback")
+  traitsImpact: Any @col(name: "traits_impact")
+  choicesLog: Any @col(name: "choices_log")
+  createdAt: Timestamp @col(name: "created_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# QUIZ RESPONSES (Onboarding)
+# ─────────────────────────────────────────────
+type QuizResponse @table(name: "quiz_responses") {
+  id: UUID! @default(expr: "uuidV4()")
+  user: User! @ref(fields: "userId", references: "id")
+  userId: UUID! @col(name: "user_id")
+  responses: Any @col(name: "responses")
+  createdAt: Timestamp @col(name: "created_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# SOCIAL: FOLLOWS & FOLLOW REQUESTS
+# ─────────────────────────────────────────────
+type FollowRequest @table(name: "follow_requests") {
+  id: UUID! @default(expr: "uuidV4()")
+  requester: User! @ref(fields: "requesterId", references: "id")
+  requesterId: UUID! @col(name: "requester_id")
+  recipient: User! @ref(fields: "recipientId", references: "id")
+  recipientId: UUID! @col(name: "recipient_id")
+  status: String! @col(name: "status") @default(expr: "'pending'")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  respondedAt: Timestamp @col(name: "responded_at")
+}
+
+type Follow @table(name: "follows") {
+  id: UUID! @default(expr: "uuidV4()")
+  follower: User! @ref(fields: "followerId", references: "id")
+  followerId: UUID! @col(name: "follower_id")
+  following: User! @ref(fields: "followingId", references: "id")
+  followingId: UUID! @col(name: "following_id")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# PUSH SUBSCRIPTIONS (FCM tokens)
+# ─────────────────────────────────────────────
+type PushSubscription @table(name: "push_subscriptions") {
+  id: UUID! @default(expr: "uuidV4()")
+  user: User @ref(fields: "userId", references: "id")
+  userId: UUID @col(name: "user_id")
+  fcmToken: String! @col(name: "fcm_token")  # FCM token (replaces web push subscription JSONB)
+  platform: String @col(name: "platform")    # 'android' | 'web' | 'ios'
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  updatedAt: Timestamp! @col(name: "updated_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# ADMIN USERS
+# ─────────────────────────────────────────────
+type AdminUser @table(name: "admin_users") {
+  id: UUID! @default(expr: "uuidV4()")
+  email: String! @col(name: "email") @unique
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# MAP / STORY CONTENT (read-only from frontend)
+# ─────────────────────────────────────────────
+type Level @table(name: "levels") {
+  id: String! @col(name: "id")
+  dayNumber: Int @col(name: "day_number")
+  title: String @col(name: "title")
+  description: String @col(name: "description")
+  personality: String @col(name: "personality")
+  requiredStars: Int @col(name: "required_stars")
+  year: Int @col(name: "year")
+  age: Int @col(name: "age")
+  theme: String @col(name: "theme")
+  archetype: String @col(name: "archetype")
+  bio: String @col(name: "bio")
+  fame: String @col(name: "fame")
+  achievements: Any @col(name: "achievements")
+  lesson: String @col(name: "lesson")
+  avatarUrl: String @col(name: "avatar_url")
+  scenarioId: String @col(name: "scenario_id")
+  idolTraits: Any @col(name: "idol_traits")
+  status: String @col(name: "status")
+  isLocked: Boolean @col(name: "is_locked")
+  stars: Int @col(name: "stars")
+  part1: String @col(name: "part1")
+  part2: String @col(name: "part2")
+  placeholder: Boolean @col(name: "placeholder")
+  createdAt: Timestamp @col(name: "created_at") @default(expr: "request.time")
+}
+
+type Scenario @table(name: "scenarios") {
+  id: String! @col(name: "id")
+  title: String @col(name: "title")
+  source: String @col(name: "source")
+  frames: Any @col(name: "frames")  # JSONB story frames
+  createdAt: Timestamp @col(name: "created_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# LIFE NAVIGATION
+# ─────────────────────────────────────────────
+type ProblemCheckIn @table(name: "problem_checkins") {
+  id: UUID! @default(expr: "uuidV4()")
+  user: User! @ref(fields: "userId", references: "id")
+  userId: UUID! @col(name: "user_id")
+  situationText: String! @col(name: "situation_text")
+  situationTags: Any @col(name: "situation_tags")   # text[]
+  lifeStage: String @col(name: "life_stage")
+  feelingState: String @col(name: "feeling_state")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+type ReflectionAndAction @table(name: "reflections_and_actions") {
+  id: UUID! @default(expr: "uuidV4()")
+  user: User! @ref(fields: "userId", references: "id")
+  userId: UUID! @col(name: "user_id")
+  scenarioId: String! @col(name: "scenario_id")
+  decisionSelected: String @col(name: "decision_selected")
+  dissonanceDetected: Boolean @col(name: "dissonance_detected") @default(expr: "false")
+  dissonanceInsight: String @col(name: "dissonance_insight")
+  microActionCommitted: String @col(name: "micro_action_committed")
+  actionCompleted: Boolean @col(name: "action_completed") @default(expr: "false")
+  relevanceRating: Int @col(name: "relevance_rating")
+  userNotes: String @col(name: "user_notes")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# SUBSCRIPTIONS / ACCESS TIERS
+# ─────────────────────────────────────────────
+type Subscription @table(name: "subscriptions") {
+  id: UUID! @default(expr: "uuidV4()")
+  user: User! @ref(fields: "userId", references: "id")
+  userId: UUID! @col(name: "user_id") @unique
+  tier: String @col(name: "tier") @default(expr: "'free'")
+  status: String @col(name: "status") @default(expr: "'active'")
+  startsAt: Timestamp @col(name: "starts_at") @default(expr: "request.time")
+  expiresAt: Timestamp @col(name: "expires_at")
+  createdAt: Timestamp @col(name: "created_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# STORY METADATA (AI-powered filtering)
+# ─────────────────────────────────────────────
+type StoryMetadata @table(name: "story_metadata") {
+  id: UUID! @default(expr: "uuidV4()")
+  scenarioId: String! @col(name: "scenario_id") @unique
+  dilemmaType: String @col(name: "dilemma_type")
+  lifeTheme: String @col(name: "life_theme")
+  situationalTags: Any @col(name: "situational_tags")   # text[]
+  protagonistLens: String @col(name: "protagonist_lens")
+  historicalContext: String @col(name: "historical_context")
+  reflectionPrompt: String @col(name: "reflection_prompt")
+  microActionPrompt: String @col(name: "micro_action_prompt")
+  isPremium: Boolean @col(name: "is_premium") @default(expr: "false")
+  difficulty: String @col(name: "difficulty") @default(expr: "'moderate'")
+  targetTraits: Any @col(name: "target_traits")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  updatedAt: Timestamp! @col(name: "updated_at") @default(expr: "request.time")
+}
+
+# ─────────────────────────────────────────────
+# ANALYTICS (Analytics / Admin reads only)
+# ─────────────────────────────────────────────
+type JourneyFeedback @table(name: "journey_feedback") {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: UUID @col(name: "user_id")
+  journeyId: String! @col(name: "journey_id")
+  sentimentScore: Int! @col(name: "sentiment_score")
+  emoji: String @col(name: "emoji")
+  sessionDurationSeconds: Int @col(name: "session_duration_seconds")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+type FeatureUsage @table(name: "feature_usage") {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: UUID @col(name: "user_id")
+  featureName: String! @col(name: "feature_name")
+  sessionId: String @col(name: "session_id")
+  accessedAt: Timestamp! @col(name: "accessed_at") @default(expr: "request.time")
+}
+
+type JourneyEvent @table(name: "journey_events") {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: UUID @col(name: "user_id")
+  journeyId: String! @col(name: "journey_id")
+  eventType: String! @col(name: "event_type")
+  eventData: Any @col(name: "event_data")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+type StoryDifficultyFeedback @table(name: "story_difficulty_feedback") {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: UUID @col(name: "user_id")
+  journeyId: String! @col(name: "journey_id")
+  difficultyRating: Int! @col(name: "difficulty_rating")
+  part: Int @col(name: "part") @default(expr: "1")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+type PersonalityWishlist @table(name: "personality_wishlist") {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: UUID @col(name: "user_id")
+  personalityName: String! @col(name: "personality_name")
+  voteCount: Int @col(name: "vote_count") @default(expr: "1")
+  requestedAt: Timestamp! @col(name: "requested_at") @default(expr: "request.time")
+}
+
+type SearchLog @table(name: "search_logs") {
+  id: UUID! @default(expr: "uuidV4()")
+  query: String! @col(name: "query")
+  queryOriginal: String @col(name: "query_original")
+  matched: Boolean @col(name: "matched") @default(expr: "false")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+type StoryRequest @table(name: "story_requests") {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: UUID @col(name: "user_id")
+  requestedTag: String! @col(name: "requested_tag")
+  requestedProblem: String @col(name: "requested_problem")
+  status: String @col(name: "status") @default(expr: "'active'")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  notifiedAt: Timestamp @col(name: "notified_at")
+}

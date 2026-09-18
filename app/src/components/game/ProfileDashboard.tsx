@@ -4,11 +4,13 @@ import { audioManager as audioSynth } from "../../utils/audioManager";
 import { ArrowLeft, Edit3, Check, X, Phone, Trophy, Flame } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { useUsernameAvailability } from '../../hooks/useUsernameAvailability';
-import { supabase } from '../../utils/supabase';
 import { UsernameField } from './UsernameField';
 import clsx from 'clsx';
 import { getFollowerCount, getFollowingCount } from '../../services/followService';
 import { calculateLevelInfo } from '../../utils/levelSystem';
+import { upsertUserProfile } from '../../lib/firestore';
+import { getDocs, collection, query, where, limit } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { normalizePhone } from '../../utils/authHelpers';
 import { saveSession } from '../../utils/session';
 
@@ -90,17 +92,13 @@ export function ProfileDashboard({ onBack }: ProfileDashboardProps) {
             }
             finalMobile = cleanPhone;
 
-            // Check if phone number is already attached to a DIFFERENT user in Supabase
+            // Check if phone number is already attached to a DIFFERENT user in Firestore
             if (finalMobile !== profile.mobile) {
-                const { data: existingPhoneUser } = await supabase
-                    .from('users')
-                    .select('id')
-                    .eq('mobile', finalMobile)
-                    .neq('id', profile.id)
-                    .is('deleted_at', null)
-                    .maybeSingle();
-
-                if (existingPhoneUser) {
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('mobile', '==', finalMobile), limit(1));
+                const snap = await getDocs(q);
+                const conflicting = snap.docs.find(d => d.id !== profile.id);
+                if (conflicting) {
                     setUsernameError('This phone number is already linked to another AYA account.');
                     return;
                 }
@@ -112,31 +110,13 @@ export function ProfileDashboard({ onBack }: ProfileDashboardProps) {
         setUsernameSuccess('');
 
         try {
-            // Update user details in backend Supabase table
-            const { error: updateError } = await supabase
-                .from('users')
-                .update({
-                    name: profile.name || trimmedUsername,
-                    age: newAge,
-                    mobile: finalMobile,
-                    username: trimmedUsername,
-                })
-                .eq('id', profile.id)
-                .select();
-
-            if (updateError) {
-                if (updateError.code === '23505') {
-                    if (updateError.message?.includes('mobile')) {
-                        setUsernameError('This phone number is already taken.');
-                    } else {
-                        setUsernameError('Username is already taken. Please choose another.');
-                    }
-                } else {
-                    setUsernameError(`Failed to save profile: ${updateError.message}`);
-                }
-                setIsSaving(false);
-                return;
-            }
+            // Update user details in Firestore
+            await upsertUserProfile(profile.id, {
+                name: profile.name || trimmedUsername,
+                age: newAge,
+                mobile: finalMobile,
+                username: trimmedUsername,
+            });
 
             // Sync session and Zustand state
             saveSession({

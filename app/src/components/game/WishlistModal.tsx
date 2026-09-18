@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Star, TrendingUp, Check, Loader2 } from 'lucide-react';
 import { addToWishlist, logUnmatchedSearch, getTopRequestedPersonalities } from '../../utils/feedbackUtils';
 import { audioManager as audioSynth } from '../../utils/audioManager';
-import { supabase } from '../../utils/supabase';
 import { safeStorage } from '../../utils/storage';
 import clsx from 'clsx';
 
@@ -90,27 +89,12 @@ export function WishlistModal({ isOpen, onClose, userId = '', isCandyMode = fals
         // Initial fetch
         fetchWishes();
 
-        // 1. Supabase Realtime channel for live updates when any user votes or submits
-        const channel = supabase
-            .channel('realtime_wishlist_' + Math.random().toString(36).slice(2, 9))
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'personality_wishlist' },
-                () => {
-                    fetchWishes();
-                }
-            )
-            .subscribe();
-
-        // 2. High-reliability polling fallback every 3.5 seconds while modal is open
+        // Polling fallback every 3.5 seconds while modal is open (Realtime replaced by Firestore)
         const pollInterval = setInterval(fetchWishes, 3500);
 
         return () => {
             isMounted = false;
             clearInterval(pollInterval);
-            try {
-                supabase.removeChannel(channel);
-            } catch {}
         };
     }, [isOpen]);
 

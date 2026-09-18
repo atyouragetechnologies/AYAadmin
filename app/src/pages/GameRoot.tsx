@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Navigate } from 'react-router-dom';
-import { SupabaseChecker } from '../components/SupabaseChecker';
 import { StreakCelebration } from '../components/game/StreakCelebration';
 import { SubscriptionModal } from '../components/payment/SubscriptionModal';
-import { supabase } from '../utils/supabase';
+import { auth } from '../lib/firebase';
+import { getUserProfile, getPersonalityProfile } from '../lib/firestore';
 import { getSession, clearSession, markQuizDone, isQuizDone } from '../utils/session';
 import { withTimeout } from '../utils/withTimeout';
 import { useUserStore } from '../store/userStore';
@@ -75,47 +75,47 @@ export function GameRoot() {
             setTimeout(() => setSessionStatus(prev => prev === 'checking' ? 'not_found' : prev), 10000);
             console.log('[Session] Checking for existing session...')
 
-            // ── iOS FAST PATH ──────────────────────────────────────────────────────
-            // If the Zustand store already has a persisted profile AND the session
-            // keys match, show the app immediately without waiting for Supabase.
-            // We still fetch from DB in the background to stay up-to-date.
+            // ── FIREBASE FAST PATH ──────────────────────────────────────────────
+            // If Zustand store already has a profile, show app immediately.
+            // Refresh from Firestore silently in background.
             const store = useUserStore.getState();
             const sessionQuick = getSession();
-            if (store.profile && sessionQuick.userId && store.profile.id === sessionQuick.userId) {
+            const fbUser = auth.currentUser;
+            if (store.profile && store.profile.id === (fbUser?.uid || sessionQuick.userId)) {
                 setSessionStatus('found');
-                // Hydrate from DB silently in background (don't block UI)
+                const uid = store.profile.id;
                 Promise.all([
-                    withTimeout(supabase.from('users').select('*').eq('id', sessionQuick.userId).is('deleted_at', null).maybeSingle(), 6000),
-                    withTimeout(supabase.from('personality_profiles').select('*').eq('user_id', sessionQuick.userId).maybeSingle(), 6000),
-                ]).then(([{ data: freshUser }, { data: freshPP }]: any) => {
+                    getUserProfile(uid),
+                    getPersonalityProfile(uid),
+                ]).then(([freshUser, freshPP]) => {
                     if (freshUser || freshPP) {
                         const cur = (store.profile || {}) as any;
-                        const gp = freshUser?.gameplay_scores || cur.gameplay_scores;
+                        const gp = (freshUser as any)?.gameplayScores || cur.gameplay_scores;
                         const traits = {
-                            risk: freshPP?.trait_risk_taker ?? gp?.risk ?? cur.traits?.risk ?? 50,
-                            creativity: freshPP?.trait_creative ?? gp?.creativity ?? cur.traits?.creativity ?? 50,
-                            vision: freshPP?.trait_analytical ?? gp?.vision ?? cur.traits?.vision ?? 50,
-                            empathy: freshPP?.trait_social ?? gp?.empathy ?? cur.traits?.empathy ?? 50,
-                            leadership: freshPP?.trait_ambitious ?? gp?.leadership ?? cur.traits?.leadership ?? 50,
-                            discipline: freshPP?.life_discipline ?? cur.traits?.discipline ?? 50,
-                            resilience: freshPP?.life_resilience ?? cur.traits?.resilience ?? 50,
+                            risk: (freshPP as any)?.traitRiskTaker ?? gp?.risk ?? cur.traits?.risk ?? 50,
+                            creativity: (freshPP as any)?.traitCreative ?? gp?.creativity ?? cur.traits?.creativity ?? 50,
+                            vision: (freshPP as any)?.traitAnalytical ?? gp?.vision ?? cur.traits?.vision ?? 50,
+                            empathy: (freshPP as any)?.traitSocial ?? gp?.empathy ?? cur.traits?.empathy ?? 50,
+                            leadership: (freshPP as any)?.traitAmbitious ?? gp?.leadership ?? cur.traits?.leadership ?? 50,
+                            discipline: (freshPP as any)?.lifeDiscipline ?? cur.traits?.discipline ?? 50,
+                            resilience: (freshPP as any)?.lifeResilience ?? cur.traits?.resilience ?? 50,
                         };
                         store.setProfile({
                             ...cur,
                             ...(freshUser || {}),
                             traits,
-                            ...(freshPP?.future_archetype ? { futureArchetype: freshPP.future_archetype } : {}),
-                            ...(freshPP?.future_archetype_score ? { futureArchetypeScore: freshPP.future_archetype_score } : {}),
-                            ...(freshPP?.life_resilience ? {
+                            ...((freshPP as any)?.futureArchetype ? { futureArchetype: (freshPP as any).futureArchetype } : {}),
+                            ...((freshPP as any)?.futureArchetypeScore ? { futureArchetypeScore: (freshPP as any).futureArchetypeScore } : {}),
+                            ...((freshPP as any)?.lifeResilience ? {
                                 lifeTraits: {
-                                    resilience: freshPP.life_resilience,
-                                    discipline: freshPP.life_discipline,
-                                    courage: freshPP.life_courage,
-                                    creativity: freshPP.life_creativity,
-                                    emotional_control: freshPP.life_emotional_control,
-                                    leadership: freshPP.life_leadership,
-                                    risk_intelligence: freshPP.life_risk_intelligence,
-                                    consistency: freshPP.life_consistency,
+                                    resilience: (freshPP as any).lifeResilience,
+                                    discipline: (freshPP as any).lifeDiscipline,
+                                    courage: (freshPP as any).lifeCourage,
+                                    creativity: (freshPP as any).lifeCreativity,
+                                    emotional_control: (freshPP as any).lifeEmotionalControl,
+                                    leadership: (freshPP as any).lifeLeadership,
+                                    risk_intelligence: (freshPP as any).lifeRiskIntelligence,
+                                    consistency: (freshPP as any).lifeConsistency,
                                 }
                             } : {})
                         } as any);
@@ -123,7 +123,7 @@ export function GameRoot() {
                 }).catch(() => { /* silent — cached profile already shown */ });
                 return;
             }
-            // ──────────────────────────────────────────────────────────────────────
+            // ─────────────────────────────────────────────────────────────────────
 
             // Reduced from 20s → 8s for faster iOS failure recovery
             const maxWait = setTimeout(() => {
@@ -134,20 +134,11 @@ export function GameRoot() {
                 let session = getSession();
                 let userIdToUse = session.userId;
 
-                if (!userIdToUse) {
-                    // Fallback to Supabase Auth session if local storage was partially cleared
-                    const { data: { session: supaSession } } = await supabase.auth.getSession();
-                    if (supaSession?.user?.id) {
-                        const { data: authUser } = await supabase.from('users')
-                            .select('id')
-                            .eq('auth_user_id', supaSession.user.id)
-                            .maybeSingle();
-                        if (authUser) {
-                            userIdToUse = authUser.id;
-                            // Re-save session so getSession() works next time
-                            localStorage.setItem('aya_user_id', authUser.id);
-                        }
-                    }
+                // Resolve user ID from Firebase Auth if not in local session
+                const fbUser = auth.currentUser;
+                if (!userIdToUse && fbUser) {
+                    userIdToUse = fbUser.uid;
+                    localStorage.setItem('aya_user_id', fbUser.uid);
                 }
 
                 if (!userIdToUse) {
@@ -164,11 +155,8 @@ export function GameRoot() {
                     while (attempt < 3 && !user) {
                         attempt++;
                         try {
-                            const { data, error }: any = await withTimeout(
-                                supabase.from('users').select('*').eq('id', userIdToUse).is('deleted_at', null).maybeSingle()
-                            );
-                            if (error) throw error;
-                            user = data;
+                            user = await withTimeout(getUserProfile(userIdToUse));
+                            if (!user) throw new Error('No profile found');
                         } catch (e) {
                             if (attempt < 3) {
                                 await new Promise(r => setTimeout(r, 5000));
@@ -180,13 +168,7 @@ export function GameRoot() {
                     }
                 } else {
                     try {
-                        // Reduced timeout from 20s → 6s for iOS
-                        const { data, error }: any = await withTimeout(
-                            supabase.from('users').select('*').eq('id', userIdToUse).is('deleted_at', null).maybeSingle(),
-                            6000
-                        );
-                        if (error) throw error;
-                        user = data;
+                        user = await withTimeout(getUserProfile(userIdToUse), 6000);
                     } catch (dbErr) {
                         if (!store.profile) {
                             store.setProfile({
@@ -227,40 +209,31 @@ export function GameRoot() {
 
                 let profileData: any = null;
                 try {
-                    const { data }: any = await withTimeout(
-                        supabase.from('personality_profiles').select('*').eq('user_id', userIdToUse).maybeSingle(),
-                        5000
-                    );
-                    profileData = data;
+                    profileData = await withTimeout(getPersonalityProfile(userIdToUse), 5000);
                 } catch { }
 
+                // Check quiz completion from Firestore (personality doc existing = quiz done)
                 let quizCompleted = isQuizDone() || !!profileData;
                 if (!quizCompleted) {
-                    try {
-                        const { data: qr }: any = await withTimeout(
-                            supabase.from('quiz_responses').select('id').eq('user_id', userIdToUse).limit(1),
-                            5000
-                        );
-                        quizCompleted = !!(qr && qr.length > 0);
-                        if (quizCompleted) markQuizDone();
-                    } catch { }
+                    // In Firestore, quiz_responses exist as sub-collection
+                    // If they have personality profile or XP, consider assessment done
+                    if ((user as any)?.totalXp > 0 || (user as any)?.storiesCompleted > 0) {
+                        quizCompleted = true;
+                        markQuizDone();
+                    }
                 }
 
                 // Fallback: If they have progression data or already completed onboarding, assume assessment is done
-                if (!quizCompleted && user && (user.total_xp > 0 || user.stories_completed > 0 || user.level > 1 || user.onboarding_complete)) {
+                if (!quizCompleted && user && ((user as any).totalXp > 0 || (user as any).storiesCompleted > 0 || (user as any).level > 1 || (user as any).onboardingComplete)) {
                     quizCompleted = true;
                     markQuizDone();
                     localStorage.setItem('onboarding_done', 'true');
                 }
 
-                // ── STEP 1: Build level scores from game_sessions and user table ──
+                // Build level scores from Firestore user doc (levelScores field)
                 const restoredScores: Record<string, number> = {};
-
-                // 1a. Grab from users table as primary fallback (since game_sessions insert might fail)
-                if (user && user.level_scores) {
-                    const dbScores = typeof user.level_scores === 'string'
-                        ? (() => { try { return JSON.parse(user.level_scores); } catch { return {}; } })()
-                        : user.level_scores;
+                if (user && (user as any).levelScores) {
+                    const dbScores = (user as any).levelScores as Record<string, number>;
                     Object.entries(dbScores).forEach(([id, stars]) => {
                         restoredScores[id] = Math.max(restoredScores[id] || 0, Number(stars) || 0);
                     });
@@ -279,96 +252,83 @@ export function GameRoot() {
 
                 // ── STEP 2: Set profile (this triggers syncLevels internally but we'll override after) ──
                 store.setProfile({
-                    id: user.id,
-                    name: user.name,
-                    age: Number(user.age) || 18,
-                    mobile: user.mobile,
-                    username: user.username ?? undefined,
-                    email: user.email ?? undefined,
-                    google_id: user.google_id ?? undefined,
-                    auth_user_id: user.auth_user_id ?? undefined,
-                    onboarding_complete: Boolean(user.onboarding_complete || user.username),
-                    total_xp: user.total_xp || 0,
-                    level: user.level || 1,
-                    current_streak: user.current_streak || 0,
-                    longest_streak: user.longest_streak || 0,
-                    stories_completed: user.stories_completed || 0,
-                    daily_challenge_completed: user.daily_challenge_completed || false,
-                    daily_free_stories: user.daily_free_stories || 0,
-                    last_story_date: user.last_story_date || undefined,
-                    preferred_theme: user.preferred_theme || 'city_dark',
-                    access_type: user.access_type,
-                    access_start_date: user.access_start_date,
-                    preferred_map: user.preferred_map,
+                    id: (user as any).id,
+                    name: (user as any).name,
+                    age: Number((user as any).age) || 18,
+                    mobile: (user as any).mobile,
+                    username: (user as any).username ?? undefined,
+                    email: (user as any).email ?? undefined,
+                    auth_user_id: (user as any).id,
+                    onboarding_complete: Boolean((user as any).onboardingComplete || (user as any).username),
+                    total_xp: (user as any).totalXp || 0,
+                    level: (user as any).level || 1,
+                    current_streak: (user as any).currentStreak || 0,
+                    longest_streak: (user as any).longestStreak || 0,
+                    stories_completed: (user as any).storiesCompleted || 0,
+                    daily_challenge_completed: (user as any).dailyChallengeCompleted || false,
+                    daily_free_stories: (user as any).dailyFreeStories || 0,
+                    last_story_date: (user as any).lastStoryDate || undefined,
+                    preferred_theme: (user as any).preferredTheme || 'city_dark',
+                    access_type: (user as any).accessType,
+                    access_start_date: (user as any).accessStartDate,
                     assessmentCompleted: quizCompleted,
-                    onboarding_scores: user.onboarding_scores || undefined,
-                    gameplay_scores: user.gameplay_scores || undefined,
-                    story_count: user.story_count || 0,
-                    tutorial_completed: user.tutorial_completed || false,
-                    topic_survey_completed: user.topic_survey_completed || false,
-                    choice_history: user.choice_history || [],
-                    music_volume: user.music_volume,
-                    sfx_volume: user.sfx_volume,
-                    is_music_muted: user.is_music_muted,
-                    is_sfx_muted: user.is_sfx_muted,
+                    onboarding_scores: (user as any).onboardingScores || undefined,
+                    gameplay_scores: (user as any).gameplayScores || undefined,
+                    story_count: (user as any).storyCount || 0,
+                    tutorial_completed: (user as any).tutorialCompleted || false,
+                    topic_survey_completed: (user as any).topicSurveyCompleted || false,
+                    choice_history: (user as any).choiceHistory || [],
+                    music_volume: (user as any).musicVolume,
+                    sfx_volume: (user as any).sfxVolume,
+                    is_music_muted: (user as any).isMusicMuted,
+                    is_sfx_muted: (user as any).isSfxMuted,
                     traits: {
-                        risk: profileData?.trait_risk_taker ?? user?.gameplay_scores?.risk ?? user?.onboarding_scores?.risk ?? 50,
-                        creativity: profileData?.trait_creative ?? user?.gameplay_scores?.creativity ?? user?.onboarding_scores?.creativity ?? 50,
-                        vision: profileData?.trait_analytical ?? user?.gameplay_scores?.vision ?? user?.onboarding_scores?.vision ?? 50,
-                        empathy: profileData?.trait_social ?? user?.gameplay_scores?.empathy ?? user?.onboarding_scores?.empathy ?? 50,
-                        leadership: profileData?.trait_ambitious ?? user?.gameplay_scores?.leadership ?? user?.onboarding_scores?.leadership ?? 50,
-                        discipline: profileData?.life_discipline ?? 50,
-                        resilience: profileData?.life_resilience ?? 50,
+                        risk: (profileData as any)?.traitRiskTaker ?? (user as any)?.gameplayScores?.risk ?? (user as any)?.onboardingScores?.risk ?? 50,
+                        creativity: (profileData as any)?.traitCreative ?? (user as any)?.gameplayScores?.creativity ?? (user as any)?.onboardingScores?.creativity ?? 50,
+                        vision: (profileData as any)?.traitAnalytical ?? (user as any)?.gameplayScores?.vision ?? (user as any)?.onboardingScores?.vision ?? 50,
+                        empathy: (profileData as any)?.traitSocial ?? (user as any)?.gameplayScores?.empathy ?? (user as any)?.onboardingScores?.empathy ?? 50,
+                        leadership: (profileData as any)?.traitAmbitious ?? (user as any)?.gameplayScores?.leadership ?? (user as any)?.onboardingScores?.leadership ?? 50,
+                        discipline: (profileData as any)?.lifeDiscipline ?? 50,
+                        resilience: (profileData as any)?.lifeResilience ?? 50,
                     },
-                    futureArchetype: profileData?.future_archetype || undefined,
-                    futureArchetypeScore: profileData?.future_archetype_score || undefined,
+                    futureArchetype: (profileData as any)?.futureArchetype || undefined,
+                    futureArchetypeScore: (profileData as any)?.futureArchetypeScore || undefined,
                     lifeTraits: profileData ? {
-                        resilience: profileData.life_resilience || 50,
-                        discipline: profileData.life_discipline || 50,
-                        courage: profileData.life_courage || 50,
-                        creativity: profileData.life_creativity || 50,
-                        emotional_control: profileData.life_emotional_control || 50,
-                        leadership: profileData.life_leadership || 50,
-                        risk_intelligence: profileData.life_risk_intelligence || 50,
-                        consistency: profileData.life_consistency || 50,
+                        resilience: (profileData as any).lifeResilience || 50,
+                        discipline: (profileData as any).lifeDiscipline || 50,
+                        courage: (profileData as any).lifeCourage || 50,
+                        creativity: (profileData as any).lifeCreativity || 50,
+                        emotional_control: (profileData as any).lifeEmotionalControl || 50,
+                        leadership: (profileData as any).lifeLeadership || 50,
+                        risk_intelligence: (profileData as any).lifeRiskIntelligence || 50,
+                        consistency: (profileData as any).lifeConsistency || 50,
                     } : undefined,
-                    ...(profileData ? {
-                        trait_risk_taker: profileData.trait_risk_taker,
-                        trait_creative: profileData.trait_creative,
-                        trait_analytical: profileData.trait_analytical,
-                        trait_social: profileData.trait_social,
-                        trait_ambitious: profileData.trait_ambitious,
-                        future_archetype: profileData.future_archetype,
-                        interest_goal: profileData.interest_goal,
-                        interest_struggle: profileData.interest_struggle,
-                        interest_domain: profileData.interest_domain,
-                    } : {}),
                     isAdmin
                 } as any);
 
-                // Only initialize default assessment traits if the user has never taken it
-                if (!quizCompleted && !profileData && !user.onboarding_scores && !user.gameplay_scores) {
+                // Initialize default assessment traits if user has never taken quiz
+                if (!quizCompleted && !profileData && !(user as any).onboardingScores && !(user as any).gameplayScores) {
                     store.completeAssessment(
                         { discipline: 50, resilience: 50, risk: 50, leadership: 50, creativity: 50, empathy: 50, vision: 50 },
                         { motivation: 'Stability', risk: 'Balanced', emotional: 'Resilient', social: 'Supporter', passion: 'Creative', coreValue: 'Success' }
                     );
                 }
 
-                const savedTheme = user.preferred_theme || 'city_dark';
+                const savedTheme = (user as any).preferredTheme || 'city_dark';
                 store.setMapTheme(savedTheme as any);
 
-                // Restore persistent backend preferences & flags
-                if (user.tutorial_completed) localStorage.setItem('aya_game_tutorial_done', 'true');
-                if (user.topic_survey_completed) localStorage.setItem('aya_topic_survey_done', 'true');
-                if (user.choice_history && Array.isArray(user.choice_history) && user.choice_history.length > 0) {
-                    localStorage.setItem('aya_choice_history', JSON.stringify(user.choice_history));
+                // Restore persistent preferences from Firestore doc
+                if ((user as any).tutorialCompleted) localStorage.setItem('aya_game_tutorial_done', 'true');
+                if ((user as any).topicSurveyCompleted) localStorage.setItem('aya_topic_survey_done', 'true');
+                if ((user as any).choiceHistory && Array.isArray((user as any).choiceHistory) && (user as any).choiceHistory.length > 0) {
+                    localStorage.setItem('aya_choice_history', JSON.stringify((user as any).choiceHistory));
                 }
-                if (typeof user.music_volume === 'number') store.setMusicVolume(user.music_volume);
-                if (typeof user.sfx_volume === 'number') store.setSfxVolume(user.sfx_volume);
-                if (typeof user.is_music_muted === 'boolean' && user.is_music_muted !== store.isMusicMuted) {
+                if (typeof (user as any).musicVolume === 'number') store.setMusicVolume((user as any).musicVolume);
+                if (typeof (user as any).sfxVolume === 'number') store.setSfxVolume((user as any).sfxVolume);
+                if (typeof (user as any).isMusicMuted === 'boolean' && (user as any).isMusicMuted !== store.isMusicMuted) {
                     store.toggleMusicMute();
                 }
-                if (typeof user.is_sfx_muted === 'boolean' && user.is_sfx_muted !== store.isSfxMuted) {
+                if (typeof (user as any).isSfxMuted === 'boolean' && (user as any).isSfxMuted !== store.isSfxMuted) {
                     store.toggleSfxMute();
                 }
 
@@ -522,7 +482,6 @@ export function GameRoot() {
                 ? 'min-h-[100dvh] overflow-y-auto overflow-x-hidden scroll-smooth'
                 : 'h-[100dvh] overflow-hidden'
             }`}>
-            <SupabaseChecker />
             <SubscriptionModal
                 isOpen={showSubscriptionModal}
                 onClose={() => setShowSubscriptionModal(false)}

@@ -6,7 +6,8 @@ import {
     ArrowUpDown, Eye, X, BookOpen, 
     CheckCircle2, Timer, UserCheck, Zap, Award
 } from 'lucide-react';
-import { supabase } from '../../utils/supabase';
+import { db } from '../../lib/firestore';
+import { collection, getDocs, query, orderBy, where, limit } from 'firebase/firestore';
 import { getStoryInfo } from '../../utils/feedbackUtils';
 
 export interface UserRecord {
@@ -103,25 +104,18 @@ export function UsersManagementDashboard() {
     const loadUsersData = async () => {
         setLoading(true);
         try {
-            // 1. Fetch all users from public.users
-            const { data: usersData, error: usersError } = await supabase
-                .from('users')
-                .select('*')
-                .is('deleted_at', null)
-                .order('created_at', { ascending: false });
+            // 1. Fetch all users from Firestore
+            const usersSnap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
+            const usersData = usersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
 
-            if (usersError) throw usersError;
+            // 2. Fetch journey events from Firestore analytics
+            const eventsSnap = await getDocs(query(collection(db, 'analytics', 'journey', 'events'), limit(2000)));
+            const feedbackSnap = await getDocs(query(collection(db, 'analytics', 'feedback', 'events'), limit(2000)));
+            const featureSnap = await getDocs(query(collection(db, 'analytics', 'feature_usage', 'events'), limit(2000)));
 
-            // 2. Fetch recent journey events & feedback & feature usage to compute active time
-            const [eventsRes, feedbackRes, featureRes] = await Promise.all([
-                supabase.from('journey_events').select('user_id, event_type, event_data, journey_id, created_at'),
-                supabase.from('journey_feedback').select('user_id, session_duration_seconds, created_at, sentiment_score'),
-                supabase.from('feature_usage').select('user_id, feature_name, accessed_at, session_id')
-            ]);
-
-            const allEvents = eventsRes.data || [];
-            const allFeedback = feedbackRes.data || [];
-            const allFeatures = featureRes.data || [];
+            const allEvents = eventsSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+            const allFeedback = feedbackSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+            const allFeatures = featureSnap.docs.map(d => ({ ...d.data(), id: d.id }));
 
             // Group events and timestamps by user_id
             const userEventMap: Record<string, any[]> = {};
@@ -199,38 +193,45 @@ export function UsersManagementDashboard() {
             // Map and enrich all users
             const enrichedUsers: UserRecord[] = (usersData || []).map((u: any) => {
                 const userId = u.id;
-                const authUid = u.auth_user_id;
-                
+                const authUid = u.auth_user_id || u.authUserId;
+
                 // Combine logs by id or auth_user_id
                 const userEvents = [
                     ...(userEventMap[userId] || []),
                     ...(authUid && authUid !== userId ? (userEventMap[authUid] || []) : [])
                 ];
 
+                // Firestore uses camelCase — normalise both
+                const lastActiveDate = u.last_active_date || u.lastActiveDate;
+                const createdAt = u.created_at || u.createdAt;
+                const updatedAt = u.updated_at || u.updatedAt;
+                const totalXp = u.total_xp ?? u.totalXp ?? 0;
+                const storiesCompleted = u.stories_completed ?? u.storiesCompleted ?? 0;
+                const currentStreak = u.current_streak ?? u.currentStreak ?? 0;
+                const longestStreak = u.longest_streak ?? u.longestStreak ?? 0;
+                const isAdmin = !!(u.is_admin || u.isAdmin);
+                const onboardingComplete = !!(u.onboarding_complete || u.onboardingComplete);
+                const accessType = u.access_type || u.accessType || 'free';
+
                 const latestTime = Math.max(
                     userLatestTimestampMap[userId] || 0,
                     authUid ? (userLatestTimestampMap[authUid] || 0) : 0,
-                    u.last_active_date ? new Date(u.last_active_date).getTime() : 0,
-                    u.updated_at ? new Date(u.updated_at).getTime() : 0,
-                    u.created_at ? new Date(u.created_at).getTime() : 0
+                    lastActiveDate ? new Date(lastActiveDate).getTime() : 0,
+                    updatedAt ? new Date(updatedAt).getTime() : 0,
+                    createdAt ? new Date(createdAt).getTime() : 0
                 );
 
-                const lastLoginDate = latestTime > 0 ? new Date(latestTime) : new Date(u.created_at);
-                const firstSignupDate = u.created_at ? new Date(u.created_at) : new Date();
+                const lastLoginDate = latestTime > 0 ? new Date(latestTime) : new Date(createdAt);
+                const firstSignupDate = createdAt ? new Date(createdAt) : new Date();
 
                 const { text: lastLoginRelative, status: activityStatus } = getRelativeTimeString(lastLoginDate);
                 const { text: firstSignupRelative } = getRelativeTimeString(firstSignupDate);
 
                 let rawTimeSpent = (userTimeSpentMap[userId] || 0) + (authUid && authUid !== userId ? (userTimeSpentMap[authUid] || 0) : 0);
 
-                // Sensible estimation for users with progress but zero telemetry:
-                // 1. Stories completed (~120s each)
-                // 2. Onboarding complete (~180s)
-                // 3. Level/XP progress
                 if (rawTimeSpent < 60) {
-                    const storiesCount = u.stories_completed || 0;
-                    const onboardingSec = (u.onboarding_complete || u.assessment_completed) ? 180 : 0;
-                    const estimatedFromGame = (storiesCount * 120) + onboardingSec + Math.min(600, (u.total_xp || 0) * 2);
+                    const onboardingSec = (onboardingComplete || u.assessmentCompleted) ? 180 : 0;
+                    const estimatedFromGame = (storiesCompleted * 120) + onboardingSec + Math.min(600, totalXp * 2);
                     rawTimeSpent = Math.max(rawTimeSpent, estimatedFromGame);
                 }
 
@@ -241,23 +242,23 @@ export function UsersManagementDashboard() {
 
                 return {
                     id: u.id,
-                    auth_user_id: u.auth_user_id,
+                    auth_user_id: authUid,
                     name: u.name || null,
                     username: u.username || null,
                     email: u.email || null,
                     mobile: u.mobile || null,
                     age: u.age || null,
-                    total_xp: u.total_xp || 0,
+                    total_xp: totalXp,
                     level: u.level || 1,
-                    stories_completed: u.stories_completed || 0,
-                    current_streak: u.current_streak || 0,
-                    longest_streak: u.longest_streak || 0,
-                    is_admin: !!u.is_admin,
-                    onboarding_complete: !!u.onboarding_complete,
-                    created_at: u.created_at,
-                    updated_at: u.updated_at,
-                    last_active_date: u.last_active_date,
-                    access_type: u.access_type || 'free',
+                    stories_completed: storiesCompleted,
+                    current_streak: currentStreak,
+                    longest_streak: longestStreak,
+                    is_admin: isAdmin,
+                    onboarding_complete: onboardingComplete,
+                    created_at: createdAt,
+                    updated_at: updatedAt,
+                    last_active_date: lastActiveDate,
+                    access_type: accessType,
                     lastLogin: lastLoginDate,
                     lastLoginFormatted: formatFullDateTime(lastLoginDate),
                     lastLoginRelative,
@@ -266,7 +267,7 @@ export function UsersManagementDashboard() {
                     timeSpentSeconds: rawTimeSpent,
                     timeSpentFormatted: formatDuration(rawTimeSpent),
                     totalEventsCount: userEvents.length,
-                    storiesPlayedCount: Math.max(u.stories_completed || 0, storiesSet.size),
+                    storiesPlayedCount: Math.max(storiesCompleted, storiesSet.size),
                     activityStatus
                 };
             });
@@ -369,18 +370,14 @@ export function UsersManagementDashboard() {
         setSelectedUser(user);
         setLoadingUserDetail(true);
         try {
-            const { data: events, error } = await supabase
-                .from('journey_events')
-                .select('*')
-                .or(`user_id.eq.${user.id}${user.auth_user_id ? `,user_id.eq.${user.auth_user_id}` : ''}`)
-                .order('created_at', { ascending: false })
-                .limit(40);
-
-            if (!error && events) {
-                setUserEventsDetail(events);
-            } else {
-                setUserEventsDetail([]);
-            }
+            const q = query(
+                collection(db, 'analytics', 'journey', 'events'),
+                where('userId', 'in', [user.id, ...(user.auth_user_id ? [user.auth_user_id] : [])]),
+                orderBy('timestamp', 'desc'),
+                limit(40)
+            );
+            const snap = await getDocs(q);
+            setUserEventsDetail(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         } catch (err) {
             console.error('Failed to load user events detail:', err);
             setUserEventsDetail([]);

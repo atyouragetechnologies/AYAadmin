@@ -5,8 +5,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { audioManager as audioSynth } from "../../utils/audioManager";
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { saveSession } from '../../utils/session';
-import { supabase } from '../../utils/supabase';
-import { deriveMobileEmail, deriveMobilePassword, derivePhoneEmail, normalizePhone } from '../../utils/authHelpers';
+import { auth } from '../../lib/firebase';
+import { getUserProfile, upsertUserProfile, upsertPersonalityProfile } from '../../lib/firestore';
+import { getDocs, collection, query, where, limit } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { deriveMobileEmail, deriveMobilePassword, normalizePhone } from '../../utils/authHelpers';
 import { useUsernameAvailability } from '../../hooks/useUsernameAvailability';
 import { UsernameField } from './UsernameField';
 import { authService } from '../../services/authService';
@@ -163,215 +167,103 @@ export function OnboardingWizard() {
                     return;
                 }
 
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                
-                if (sessionError) {
-                    setError(`Session Error: ${sessionError.message}`);
-                    setIsLoading(false);
-                    return;
-                }
-
-                if (session && session.user) {
-                    const googleId = session.user.id;
-                    // Persist Google email for admin check (Supabase auth session is transient)
-                    if (session.user.email) {
-                        try { localStorage.setItem('aya_google_email', session.user.email); } catch {}
-                    }
-                    // See if they already have an account linked to this google_id
-                    const { data: existingUser, error: dbError } = await supabase
-                        .from('users')
-                        .select('*')
-                        .eq('google_id', googleId)
-                        .is('deleted_at', null)
-                        .maybeSingle();
-
-                    if (dbError) {
-                        console.error("DB Error checking Google ID:", dbError);
-                        if (dbError.code === '42703' || dbError.message?.includes('google_id')) {
-                            setError("CRITICAL ERROR: 'google_id' column missing! Run in Supabase SQL: ALTER TABLE users ADD COLUMN google_id TEXT UNIQUE;");
-                        } else {
-                            setError(`Database error: ${dbError.message}`);
-                        }
-                        setIsLoading(false);
-                        return;
+                // Check Firebase current user (set by authService.signInWithGoogle)
+                const fbUser = auth.currentUser;
+                if (fbUser) {
+                    const googleId = fbUser.uid;
+                    if (fbUser.email) {
+                        try { localStorage.setItem('aya_google_email', fbUser.email); } catch {}
                     }
 
-                    if (existingUser) {
-                        // EXISTING USER: Directly log them in!
-                        await performLogin(existingUser, googleId, true);
-                        return;
+                    // Look up Firestore profile by Firebase UID
+                    const existingProfile = await getUserProfile(googleId);
+
+                    if (existingProfile && existingProfile.id) {
+                        await performLogin(existingProfile, googleId, true);
                     } else {
-                        // NEW USER: Redirect to setup page
                         sessionStorage.setItem('aya_temp_google_id', googleId);
-                        sessionStorage.setItem('aya_temp_google_name', session.user.user_metadata.full_name || "");
+                        sessionStorage.setItem('aya_temp_google_name', fbUser.displayName || '');
                         sessionStorage.setItem('aya_temp_existing_user', 'false');
                         navigate('/game/setup');
-                        return;
                     }
                 }
             } catch (err: any) {
-                console.error("Fatal Google Auth Error:", err);
+                console.error('Fatal Google Auth Error:', err);
                 setError(`Unexpected Error: ${err.message || 'Check console'}`);
             }
             setIsLoading(false);
         };
-        
+
         checkGoogleAuth();
-        
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-            if (session && session.user) {
+
+        // Listen for Firebase auth state changes
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if (user) {
                 setIsLoading(true);
                 checkGoogleAuth();
             }
         });
-        
-        return () => subscription.unsubscribe();
+
+        return () => unsubscribe();
     }, [isRegisterMode]);
 
 
 
     /**
-     * Ensure this mobile user has a Supabase Auth session.
-     * Creates one via signUp (new) or restores via signInWithPassword (existing).
-     * Sets auth_user_id on the public.users row so RLS get_my_user_id() works.
-     *
-     * This is called for ALL mobile users — Google OAuth users already have
-     * an auth session from signInWithOAuth and do NOT go through this path.
+     * Ensure this mobile user has a Firebase Auth session.
+     * Creates one via createUserWithEmailAndPassword (new) or restores via signInWithEmailAndPassword (existing).
      */
     const ensureMobileAuthSession = async (userData: any): Promise<void> => {
         if (!userData.mobile) return;
 
         const email = deriveMobileEmail(userData.mobile);
-        const legacyEmail = derivePhoneEmail(userData.mobile);
-        const newPassword = deriveMobilePassword(userData.mobile);
-        const cleanPhone = normalizePhone(userData.mobile);
-        const legacyPassword = `Ayaaya-fall${cleanPhone}!Auth`; // The hardcoded old fallback salt password
-        
-        const strategies = [
-            { email, password: newPassword },
-            { email: legacyEmail, password: newPassword },
-            { email, password: legacyPassword },
-            { email: legacyEmail, password: legacyPassword }
-        ];
+        const password = deriveMobilePassword(userData.mobile);
 
-        let signInData: any = null;
-        let signInError: any = null;
-        let successfulStrategy: any = null;
-
-        for (const strategy of strategies) {
-            const response = await supabase.auth.signInWithPassword({
-                email: strategy.email,
-                password: strategy.password,
-            });
-            
-            if (response.data?.session) {
-                signInData = response.data;
-                signInError = null;
-                successfulStrategy = strategy;
-                break;
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (signInErr: any) {
+            if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
+                try {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                } catch (signUpErr: any) {
+                    if (signUpErr.code !== 'auth/email-already-in-use') {
+                        console.warn('[Auth] Firebase createUser failed:', signUpErr.message);
+                    }
+                }
             } else {
-                signInError = response.error;
+                console.warn('[Auth] Firebase signIn unexpected error:', signInErr.message);
             }
-        }
-
-        if (signInData?.session) {
-            // MIGRATION: If we succeeded using the old legacy password, seamlessly upgrade them to the new secure password!
-            if (successfulStrategy.password === legacyPassword && newPassword !== legacyPassword) {
-                await supabase.auth.updateUser({ password: newPassword }).catch((e: any) => console.error("Password migration failed:", e));
-            }
-
-            // Session restored — link auth_user_id if not already set
-            const authUid = signInData.session.user.id;
-            if (!userData.auth_user_id) {
-                await supabase
-                    .from('users')
-                    .update({ auth_user_id: authUid })
-                    .eq('id', userData.id);
-            }
-            return;
-        }
-
-        // 2. signIn failed (no auth account yet) — create one
-        const isInvalidCredentials =
-            signInError?.message?.includes('Invalid login credentials') ||
-            signInError?.status === 400;
-
-        if (!isInvalidCredentials) {
-            // Unexpected error — log but don't block login
-            console.warn('[Auth] signInWithPassword unexpected error:', signInError?.message);
-            return;
-        }
-
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password: newPassword,
-        });
-
-        if (signUpError) {
-            console.warn('[Auth] signUp failed:', signUpError.message);
-            return;
-        }
-
-        if (signUpData?.session) {
-            const authUid = signUpData.session.user.id;
-            await supabase
-                .from('users')
-                .update({ auth_user_id: authUid })
-                .eq('id', userData.id);
-        } else {
-            // signUp succeeded but no session — likely email confirmation is still ON
-            // in the Supabase Dashboard. Log a clear error for the developer.
-            console.error(
-                '[Auth] signUp returned no session. ' +
-                'Please disable email confirmation in Supabase Dashboard: ' +
-                'Authentication → Settings → Enable email confirmations → OFF'
-            );
         }
     };
 
     const performLogin = async (userData: any, gId: string | null, isExisting: boolean) => {
-        let userId = userData.id;
-        let existingProfile: any = null;
+        const userId = userData.id;
+        let existingPersonality: any = null;
 
-        // Fetch personality profile if it exists
         if (isExisting) {
-            const { data: profileCheck } = await supabase
-                .from('personality_profiles')
-                .select('*')
-                .eq('user_id', userId)
-                .maybeSingle();
-            existingProfile = profileCheck;
-            
-            // If they just linked a Google account, update the users table
-            if (gId && !userData.google_id) {
-                await supabase.from('users').update({ google_id: gId }).eq('id', userId);
-                userData.google_id = gId;
-            }
+            // Fetch personality from Firestore sub-collection
+            try {
+                const { getPersonalityProfile } = await import('../../lib/firestore');
+                existingPersonality = await getPersonalityProfile(userId);
+            } catch {}
         } else {
-            // New user - create personality profile
-            const { error: profileError } = await supabase.from('personality_profiles').upsert({
-                user_id: userId,
-                mobile: userData.mobile,
-                trait_risk_taker: 50,
-                trait_creative: 50,
-                trait_analytical: 50,
-                trait_social: 50,
-                trait_ambitious: 50,
-                future_archetype: 'Explorer',
-                total_xp: 0,
+            // New user — seed personality profile in Firestore
+            await upsertPersonalityProfile(userId, {
+                traitRiskTaker: 50,
+                traitCreative: 50,
+                traitAnalytical: 50,
+                traitSocial: 50,
+                traitAmbitious: 50,
+                futureArchetype: 'Explorer',
+                totalXp: 0,
                 level: 1,
-                stories_completed: 0
-            }, { onConflict: 'user_id' });
-            if (profileError) console.warn('Supabase personality upsert failed', profileError);
+                storiesCompleted: 0,
+            });
         }
 
-        // ── Ensure Supabase Auth session for mobile users ─────────────────────
-        // Google OAuth users already have a session from signInWithOAuth.
-        // Mobile-only users need one created here so auth.uid() works for RLS.
-        const { data: { session: existingAuthSession } } = await supabase.auth.getSession();
-        const isGoogleSession = existingAuthSession?.user?.app_metadata?.provider === 'google';
-
-        if (!isGoogleSession && userData.mobile) {
+        // Ensure Firebase Auth session for mobile users
+        const isGoogleUser = gId && auth.currentUser?.providerData?.some(p => p.providerId === 'google.com');
+        if (!isGoogleUser && userData.mobile) {
             await ensureMobileAuthSession(userData);
         }
 
@@ -380,16 +272,17 @@ export function OnboardingWizard() {
 
         // Extract level_scores from userData if they exist
         const dbScores: Record<string, number> = {};
-        if (userData.level_scores) {
-            const parsed = typeof userData.level_scores === 'string' 
-                ? (() => { try { return JSON.parse(userData.level_scores); } catch { return {}; } })()
-                : userData.level_scores;
+        const levelScoresRaw = userData.level_scores || userData.levelScores;
+        if (levelScoresRaw) {
+            const parsed = typeof levelScoresRaw === 'string'
+                ? (() => { try { return JSON.parse(levelScoresRaw); } catch { return {}; } })()
+                : levelScoresRaw;
             Object.entries(parsed).forEach(([id, stars]) => {
                 dbScores[id] = Math.max(dbScores[id] || 0, Number(stars) || 0);
             });
         }
 
-        // Check if user is an admin (by querying admin_users table)
+        // Check if user is an admin
         let isAdmin = false;
         try {
             const { checkIsAdmin } = await import('../../utils/adminCheck');
@@ -398,42 +291,42 @@ export function OnboardingWizard() {
             console.error('Failed to check admin status during login:', err);
         }
 
-        // Merge into store BEFORE setting profile so it's ready when Map loads
         useUserStore.setState((state) => ({
             levelScores: { ...state.levelScores, ...dbScores }
         }));
 
-        // Delay setProfile & transition by 1500ms so user sees the Happy Mascot reaction!
+        const ep = existingPersonality;
+
         setTimeout(() => {
             setProfile({
-                id: userId, 
-                mobile: userData.mobile, 
-                name: userData.name, 
+                id: userId,
+                mobile: userData.mobile,
+                name: userData.name,
                 username: userData.username,
                 age: userData.age,
-                access_type: userData.access_type || 'open',
-                access_start_date: userData.access_start_date,
-                preferred_map: userData.preferred_map || 'solar',
-                interests: [], 
+                access_type: userData.access_type || userData.accessType || 'open',
+                access_start_date: userData.access_start_date || userData.accessStartDate,
+                preferred_map: userData.preferred_map || userData.preferredMap || 'solar',
+                interests: [],
                 roleModels: [],
-                traits: existingProfile ? {
-                    discipline: existingProfile.trait_discipline || 50,
-                    resilience: existingProfile.trait_resilience || 50,
-                    risk: existingProfile.trait_risk_taker || 50,
-                    leadership: existingProfile.trait_ambitious || 50,
-                    creativity: existingProfile.trait_creative || 50,
-                    empathy: existingProfile.trait_social || 50,
-                    vision: existingProfile.trait_vision || 50
+                traits: ep ? {
+                    discipline: ep.trait_discipline || ep.traitDiscipline || 50,
+                    resilience: ep.trait_resilience || ep.traitResilience || 50,
+                    risk: ep.trait_risk_taker || ep.traitRiskTaker || 50,
+                    leadership: ep.trait_ambitious || ep.traitAmbitious || 50,
+                    creativity: ep.trait_creative || ep.traitCreative || 50,
+                    empathy: ep.trait_social || ep.traitSocial || 50,
+                    vision: ep.trait_vision || ep.traitVision || 50,
                 } : { discipline: 50, resilience: 50, risk: 50, leadership: 50, creativity: 50, empathy: 50, vision: 50 },
-                assessmentCompleted: !!existingProfile || (userData.total_xp > 0 || userData.stories_completed > 0 || userData.level > 1),
-                total_xp: userData.total_xp || 0,
+                assessmentCompleted: !!ep || ((userData.total_xp || userData.totalXp || 0) > 0 || (userData.stories_completed || userData.storiesCompleted || 0) > 0 || (userData.level || 1) > 1),
+                total_xp: userData.total_xp || userData.totalXp || 0,
                 level: userData.level || 1,
-                stories_completed: userData.stories_completed || 0,
-                current_streak: userData.current_streak || 0,
-                longest_streak: userData.longest_streak || 0,
-                last_active_date: userData.last_active_date || new Date().toISOString().split('T')[0],
-                daily_challenge_completed: userData.daily_challenge_completed || false,
-                isAdmin
+                stories_completed: userData.stories_completed || userData.storiesCompleted || 0,
+                current_streak: userData.current_streak || userData.currentStreak || 0,
+                longest_streak: userData.longest_streak || userData.longestStreak || 0,
+                last_active_date: userData.last_active_date || userData.lastActiveDate || new Date().toISOString().split('T')[0],
+                daily_challenge_completed: userData.daily_challenge_completed || userData.dailyChallengeCompleted || false,
+                isAdmin,
             });
         }, 1500);
     };
@@ -465,18 +358,14 @@ export function OnboardingWizard() {
                     return;
                 }
 
-                // Check username availability
-                const { data: existingUsername, error: usernameError } = await supabase
-                    .from('users')
-                    .select('id')
-                    .eq('username', cleanUsername)
-                    .maybeSingle();
-
-                if (usernameError) throw usernameError;
-                if (existingUsername) {
+                // Check username availability in Firestore
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('username', '==', cleanUsername), limit(1));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
                     setIsLoading(false);
                     isSubmitting.current = false;
-                    setError("This username is not available");
+                    setError('This username is not available');
                     return;
                 }
             } else {
@@ -503,22 +392,17 @@ export function OnboardingWizard() {
                 if (userDataRaw) {
                     try {
                         const userData = JSON.parse(userDataRaw);
-                        const cleanMobile = normalizePhone(mobile);
-                        // Update details if changed
-                        if (userData.name !== name.trim() || userData.age !== age || userData.mobile !== cleanMobile) {
-                            const { error: updateError } = await supabase
-                                .from('users')
-                                .update({
-                                    name: name.trim(),
-                                    age: age,
-                                    mobile: cleanMobile,
-                                    username: cleanUsername
-                                })
-                                .eq('id', userData.id);
-                            if (updateError) console.warn("Failed to update user details on login", updateError);
+                        const cleanMobile2 = normalizePhone(mobile);
+                        if (userData.name !== name.trim() || userData.age !== age || userData.mobile !== cleanMobile2) {
+                            await upsertUserProfile(userData.id, {
+                                name: name.trim(),
+                                age,
+                                mobile: cleanMobile2,
+                                username: cleanUsername,
+                            });
                             userData.name = name.trim();
                             userData.age = age;
-                            userData.mobile = cleanMobile;
+                            userData.mobile = cleanMobile2;
                             userData.username = cleanUsername;
                         }
                         clearTimeout(fallback);
@@ -539,25 +423,21 @@ export function OnboardingWizard() {
                 }
             }
 
-            // Check if user exists by mobile
-            const { data: existingUser, error: searchError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('mobile', cleanMobile)
-                .is('deleted_at', null)
-                .maybeSingle();
-
-            if (searchError) throw searchError;
+            // Check if user exists by mobile number in Firestore
+            const cleanMobile = normalizePhone(mobile);
+            let existingUser: any = null;
+            try {
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('mobile', '==', cleanMobile), limit(1));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    existingUser = { id: snap.docs[0].id, ...snap.docs[0].data() };
+                }
+            } catch (lookupErr) {
+                console.warn('[Login] Firestore mobile lookup failed:', lookupErr);
+            }
 
             if (existingUser) {
-                if (googleAuthId && existingUser.google_id && existingUser.google_id !== googleAuthId) {
-                    clearTimeout(fallback);
-                    setIsLoading(false);
-                    isSubmitting.current = false;
-                    setError("This phone number is already linked to a different Google account. Please log in with that account or use a different phone number.");
-                    return;
-                }
-
                 clearTimeout(fallback);
                 await performLogin(existingUser, googleAuthId, true);
             } else {
@@ -565,43 +445,38 @@ export function OnboardingWizard() {
                     clearTimeout(fallback);
                     setIsLoading(false);
                     isSubmitting.current = false;
-                    setError("Please enter your name to create a new account.");
+                    setError('Please enter your name to create a new account.');
                     return;
                 }
-                
-                // Insert new user
-                const insertPayload: any = {
+
+                // Create new user doc in Firestore
+                const newUserId = googleAuthId || crypto.randomUUID();
+                const newUserData: any = {
+                    id: newUserId,
                     mobile: cleanMobile,
                     name: name.trim(),
                     username: cleanUsername,
-                    age: age,
-                    access_type: 'open',
-                    access_start_date: new Date().toISOString().split('T')[0],
-                    preferred_theme: 'city_dark',
-                    total_xp: 0,
+                    age,
+                    accessType: 'open',
+                    accessStartDate: new Date().toISOString().split('T')[0],
+                    preferredTheme: 'city_dark',
+                    totalXp: 0,
                     level: 1,
-                    stories_completed: 0
+                    storiesCompleted: 0,
+                    createdAt: new Date().toISOString(),
                 };
                 if (googleAuthId) {
-                    insertPayload.google_id = googleAuthId;
-                    insertPayload.auth_user_id = googleAuthId;
-                    insertPayload.id = googleAuthId;
+                    newUserData.googleId = googleAuthId;
                 }
 
-                const { data: newUser, error: insertError } = await supabase
-                    .from('users')
-                    .insert(insertPayload)
-                    .select()
-                    .single();
-
-                if (insertError) {
-                    console.warn('[Register] Supabase insert failed (likely RLS). Falling back to local-only mode:', insertError);
+                try {
+                    await upsertUserProfile(newUserId, newUserData);
                     clearTimeout(fallback);
-                    const localUser = { ...insertPayload, id: crypto.randomUUID() };
-                    await performLogin(localUser, googleAuthId, false);
-                } else {
+                    await performLogin(newUserData, googleAuthId, false);
+                } catch (insertErr) {
+                    console.warn('[Register] Firestore insert failed, using local-only mode:', insertErr);
                     clearTimeout(fallback);
-                    await performLogin(newUser, googleAuthId, false);
+                    await performLogin(newUserData, googleAuthId, false);
                 }
             }
         } catch (err: any) {
@@ -619,8 +494,8 @@ export function OnboardingWizard() {
         try {
             await authService.signInWithGoogle(window.location.origin + '/game/welcome');
         } catch (err: any) {
-            console.error("OAuth Init Error:", err);
-            setError(`Failed to launch Google Sign-In: ${err.message}. Ensure Google Auth is enabled in your Supabase Dashboard.`);
+            console.error('OAuth Init Error:', err);
+            setError(`Failed to launch Google Sign-In: ${err.message}.`);
             setIsLoading(false);
         }
     };

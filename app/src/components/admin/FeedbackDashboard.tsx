@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { supabase } from '../../utils/supabase';
+import { db } from '../../lib/firestore';
+import { collection, getDocs, query as firestoreQuery, where, limit } from 'firebase/firestore';
 import {
   getTopRequestedPersonalities,
   getGlobalSentimentDistribution,
@@ -61,19 +62,23 @@ export function FeedbackDashboard() {
       setDifficultyData(difficulty);
       setFeatureData(features || []);
 
-      const { data: searches, error: searchError } = await supabase.from('unmatched_searches').select('search_query');
-      if (!searchError && searches) {
-        const counts = searches.reduce((acc: any, item: any) => {
-          acc[item.search_query] = (acc[item.search_query] || 0) + 1;
-          return acc;
-        }, {});
-        
+      // Load top unmatched searches from Firestore analytics
+      try {
+        const searchSnap = await getDocs(
+          firestoreQuery(collection(db, 'analytics', 'search', 'events'), where('isZeroResult', '==', true), limit(500))
+        );
+        const counts: Record<string, number> = {};
+        searchSnap.docs.forEach(d => {
+          const q = d.data().query || '';
+          if (q) counts[q] = (counts[q] || 0) + 1;
+        });
         const sortedSearches = Object.entries(counts)
-            .map(([query, count]) => ({ search_query: query, count }))
-            .sort((a: any, b: any) => b.count - a.count)
-            .slice(0, 10);
-            
+          .map(([query, count]) => ({ search_query: query, count }))
+          .sort((a: any, b: any) => b.count - a.count)
+          .slice(0, 10);
         setTopSearches(sortedSearches);
+      } catch (searchErr) {
+        console.warn('[FeedbackDashboard] Search analytics load notice:', searchErr);
       }
     } catch (err) {
       console.error('Error loading dashboard data:', err);

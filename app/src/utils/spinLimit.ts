@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { upsertUserProfile, getUserProfile } from '../lib/firestore';
 import { useUserStore } from '../store/userStore';
 
 export const MAX_DAILY_SPINS = 2;
@@ -78,29 +78,18 @@ export const fetchSpinsUsed = async (userId?: string): Promise<number> => {
     return localSpins;
   }
 
-  // 3. Query Supabase
+  // 3. Query Firestore for server-side spin count
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('daily_spins_used, spin_reset_date')
-      .eq('id', userId)
-      .maybeSingle();
+    const profile = await getUserProfile(userId);
+    if (!profile) return localSpins;
 
-    if (error || !data) {
-      return localSpins;
-    }
-
-    let dbSpins = (data as any).daily_spins_used ?? 0;
-    const dbResetDate = (data as any).spin_reset_date;
+    let dbSpins = (profile as any).dailySpinsUsed ?? 0;
+    const dbResetDate = (profile as any).spinResetDate;
 
     // New day in DB -> reset
     if (!dbResetDate || dbResetDate < today) {
       dbSpins = 0;
-      supabase
-        .from('users')
-        .update({ daily_spins_used: 0, spin_reset_date: today })
-        .eq('id', userId)
-        .then(() => {});
+      upsertUserProfile(userId, { dailySpinsUsed: 0, spinResetDate: today }).catch(() => {});
     }
 
     const finalSpins = Math.max(dbSpins, localSpins);
@@ -139,15 +128,12 @@ export const recordSpinUsage = async (userId?: string, currentSpinsUsed = 0): Pr
     console.warn('[spinLimit] userStore update error', e);
   }
 
-  // 3. Update Supabase
+  // 3. Update Firestore
   if (userId && !userId.startsWith('offline-')) {
     try {
-      await supabase
-        .from('users')
-        .update({ daily_spins_used: nextSpins, spin_reset_date: today })
-        .eq('id', userId);
+      await upsertUserProfile(userId, { dailySpinsUsed: nextSpins, spinResetDate: today });
     } catch (e) {
-      console.warn('[spinLimit] Supabase update error', e);
+      console.warn('[spinLimit] Firestore update error', e);
     }
   }
 

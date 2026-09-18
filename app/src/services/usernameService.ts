@@ -1,34 +1,17 @@
 /**
- * Username availability service.
- * Calls the `is_username_available` Postgres RPC function.
- *
- * Deliberately thin — all debouncing and state management live in the hook layer.
+ * usernameService.ts — Firebase Firestore replacement
+ * Delegates to isUsernameAvailable() from lib/firestore.ts
  */
-
-import { supabase } from '../utils/supabase';
+import { isUsernameAvailable } from '../lib/firestore';
 
 /**
- * Checks whether a username is available in the database.
- *
- * @param username      The username to check (case-insensitive on the server side).
- * @param excludeUserId Optional UUID of the currently logged-in user. When provided,
- *                      their own username is excluded from the "taken" check so the
- *                      Settings page doesn't show their current username as unavailable.
- * @returns             `true` if the username can be claimed, `false` if it is taken.
- * @throws              Re-throws Supabase errors so callers can surface them to the user.
+ * Checks whether a username is available (case-insensitive).
+ * @param username The username to check.
+ * @param excludeUserId Optional current user UID — their own username is not counted as taken.
  */
 export async function checkUsernameAvailable(
-  username: string,
-  excludeUserId?: string | null
+    username: string,
+    excludeUserId?: string | null
 ): Promise<boolean> {
-  const { data, error } = await supabase.rpc('is_username_available', {
-    p_username: username,
-    p_exclude_user_id: excludeUserId ?? null,
-  });
-
-  if (error) {
-    throw error;
-  }
-
-  return Boolean(data);
+    return isUsernameAvailable(username, excludeUserId ?? undefined);
 }

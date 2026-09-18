@@ -6,7 +6,10 @@ import {
     Search, BarChart2, Activity, BookOpen, LayoutDashboard, LogOut, Smartphone, RefreshCw, Users,
     Menu, X, Tag
 } from 'lucide-react';
-import { supabase } from '../utils/supabase';
+import { auth } from '../lib/firebase';
+import { db } from '../lib/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, where } from 'firebase/firestore';
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import clsx from 'clsx';
 import { StoryTagsExplorer } from '../components/admin/StoryTagsExplorer';
 import { StoryMetadataAuthoring } from '../components/admin/StoryMetadataAuthoring';
@@ -32,20 +35,21 @@ export function AdminPanelPage() {
 
         const verifyAdmin = async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) {
+                const user = auth.currentUser;
+                if (!user) {
                     if (isMounted) setIsAdmin(false);
                     return;
                 }
-                if (isMounted && session.user?.email) {
-                    setCurrentEmail(session.user.email);
+                if (isMounted && user.email) {
+                    setCurrentEmail(user.email);
                 }
 
-                const { data: isAdminData, error } = await supabase.rpc('is_admin_user');
-                if (error) throw error;
-                
+                // Check admin_users collection in Firestore
+                const adminSnap = await getDocs(
+                    query(collection(db, 'admin_users'), where('email', '==', user.email))
+                );
                 if (isMounted) {
-                    setIsAdmin(!!isAdminData);
+                    setIsAdmin(!adminSnap.empty);
                 }
             } catch (err) {
                 console.error('Admin verification failed:', err);
@@ -55,17 +59,17 @@ export function AdminPanelPage() {
 
         verifyAdmin();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, _session: any) => {
-            if (event === 'SIGNED_OUT') {
+        const unsubscribe = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
+            if (!user) {
                 if (isMounted) setIsAdmin(false);
-            } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            } else {
                 verifyAdmin();
             }
         });
 
         return () => {
             isMounted = false;
-            subscription.unsubscribe();
+            unsubscribe();
         };
     }, []);
 
@@ -83,9 +87,8 @@ export function AdminPanelPage() {
 
     const loadAdmins = async () => {
         try {
-            const { data, error } = await supabase.from('admin_users').select('id, email').order('created_at', { ascending: true });
-            if (error) throw error;
-            setAdminList(data || []);
+            const snap = await getDocs(query(collection(db, 'admin_users'), orderBy('createdAt', 'asc')));
+            setAdminList(snap.docs.map(d => ({ id: d.id, email: d.data().email as string })));
         } catch (err) {
             console.error('Failed to load admins:', err);
         }
@@ -101,8 +104,7 @@ export function AdminPanelPage() {
         }
         setAdminStatus('adding');
         try {
-            const { error } = await supabase.from('admin_users').insert({ email });
-            if (error) throw error;
+            await addDoc(collection(db, 'admin_users'), { email, createdAt: new Date().toISOString() });
             setAdminStatus('success');
             setAdminMessage(`${email} added as admin!`);
             setNewAdminEmail('');
@@ -117,8 +119,7 @@ export function AdminPanelPage() {
             setAdminStatus('error'); setAdminMessage('Cannot remove the founder account.'); return;
         }
         try {
-            const { error } = await supabase.from('admin_users').delete().eq('id', id);
-            if (error) throw error;
+            await deleteDoc(doc(db, 'admin_users', id));
             setAdminStatus('success');
             setAdminMessage(`${email} removed.`);
             await loadAdmins();
@@ -533,31 +534,18 @@ function SearchAnalyticsView() {
                 cutoffDateStr = date.toISOString();
             }
 
-            // 1. Fetch search_logs
-            let logsQuery = supabase.from('search_logs').select('*').order('created_at', { ascending: false });
-            if (cutoffDateStr) logsQuery = logsQuery.gte('created_at', cutoffDateStr);
+            // 1+2. Fetch search logs from Firestore analytics
+            const analyticsRef = collection(db, 'analytics', 'search', 'events');
+            let q = query(analyticsRef, orderBy('timestamp', 'desc'));
+            if (cutoffDateStr) q = query(analyticsRef, where('timestamp', '>=', cutoffDateStr), orderBy('timestamp', 'desc'));
+            const logsSnap = await getDocs(q);
 
-            // 2. Fetch unmatched_searches
-            let unmatchedQuery = supabase.from('unmatched_searches').select('*').order('searched_at', { ascending: false });
-            if (cutoffDateStr) unmatchedQuery = unmatchedQuery.gte('searched_at', cutoffDateStr);
-
-            const [logsRes, unmatchedRes] = await Promise.all([logsQuery, unmatchedQuery]);
-
-            const listA = (logsRes.data || []).map((x: any) => ({
-                id: x.id,
-                query: x.query_original || x.query || '',
-                matched: !!x.matched,
-                created_at: x.created_at,
-            }));
-
-            const listB = (unmatchedRes.data || []).map((x: any) => ({
-                id: x.id,
-                query: x.search_query || '',
-                matched: false,
-                created_at: x.searched_at,
-            }));
-
-            const combined = [...listA, ...listB]
+            const combined = logsSnap.docs.map((d: any) => ({
+                id: d.id,
+                query: d.data().query || '',
+                matched: !d.data().isZeroResult,
+                created_at: d.data().timestamp || d.data().createdAt,
+            }))
                 .filter(item => item.query.trim().length > 0)
                 .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 

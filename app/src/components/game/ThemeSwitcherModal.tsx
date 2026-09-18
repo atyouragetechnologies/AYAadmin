@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check } from 'lucide-react';
 import { useUserStore, type MapTheme } from '../../store/userStore';
-import { supabase } from '../../utils/supabase';
+import { upsertUserProfile } from '../../lib/firestore';
 import { audioManager as audioSynth } from "../../utils/audioManager";
 import { useDevicePerformance } from '../../hooks/useDevicePerformance';
 
@@ -110,15 +110,12 @@ export function ThemeSwitcherModal({ isOpen, onClose }: ThemeSwitcherModalProps)
     setToast(`Switched to ${label}`);
     setTimeout(() => setToast(null), 2500);
 
-    // Persist to Supabase
-    if (profile?.mobile) {
+    // Persist to Firestore
+    if (profile?.id) {
       try {
-        await supabase
-          .from('users')
-          .update({ preferred_theme: themeId })
-          .eq('mobile', profile.mobile);
+        await upsertUserProfile(profile.id, { preferredTheme: themeId });
       } catch (e) {
-        console.warn('Failed to persist theme to Supabase', e);
+        console.warn('Failed to persist theme to Firestore', e);
       }
     }
 

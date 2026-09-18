@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Lock, Phone, Eye, EyeOff, Calendar, Loader2 } from 'lucide-react';
 import { AuthMascot } from '../components/auth/AuthMascot';
 import { AgeSelector } from '../components/auth/AgeSelector';
+import { auth } from '../lib/firebase';
 import { authService } from '../services/authService';
 import { audioManager as audioSynth } from '../utils/audioManager';
-import { supabase } from '../utils/supabase';
 
 import { normalizePhone } from '../utils/authHelpers';
 
@@ -27,17 +27,12 @@ export function SignupPage() {
 
     useEffect(() => {
         let isMounted = true;
-        supabase.auth.getSession().then(async (response: any) => {
-            const session = response.data?.session;
-            if (session?.user && isMounted) {
+        // Check if already signed in to Firebase
+        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+            if (firebaseUser && isMounted) {
                 try {
-                    let { data: userRow } = await supabase.from('users').select('*').eq('auth_user_id', session.user.id).maybeSingle();
-                    if (!userRow && session.user.email) {
-                        const { data: emailRow } = await supabase.from('users').select('*').eq('email', session.user.email).maybeSingle();
-                        if (emailRow) userRow = emailRow;
-                    }
-                    if (userRow && userRow.onboarding_complete) {
-                        await authService.handlePostSignIn(userRow, session.user.id);
+                    const result = await authService.reloadProfile();
+                    if (result?.onboardingComplete) {
                         navigate('/game?alreadySignedIn=true');
                     }
                 } catch (err) {
@@ -45,7 +40,7 @@ export function SignupPage() {
                 }
             }
         });
-        return () => { isMounted = false; };
+        return () => { isMounted = false; unsubscribe(); };
     }, [navigate]);
 
     const handlePhoneChange = (e: ChangeEvent<HTMLInputElement>) => {

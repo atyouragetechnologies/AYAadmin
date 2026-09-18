@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft, Check, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
 import { useUserStore } from '../../store/userStore';
-import { supabase } from '../../utils/supabase';
+import { upsertUserProfile } from '../../lib/firestore';
 import { audioManager as audioSynth } from '../../utils/audioManager';
 
 interface Step {
@@ -220,7 +220,7 @@ export function GameWalkthrough() {
         const userProfile = useUserStore.getState().profile;
         if (userProfile?.id && !userProfile.id.startsWith('offline-')) {
             useUserStore.getState().setProfile({ ...userProfile, tutorial_completed: true });
-            supabase.from('users').update({ tutorial_completed: true }).eq('id', userProfile.id).then(() => {}).catch(() => {});
+            upsertUserProfile(userProfile.id, { tutorialCompleted: true }).catch(() => {});
         }
         setIsActive(false);
         window.dispatchEvent(new CustomEvent('tutorial-menu-toggle', { detail: { open: false } }));

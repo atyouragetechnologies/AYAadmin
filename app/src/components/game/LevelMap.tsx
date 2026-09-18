@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 import clsx from 'clsx';
-import { supabase } from '../../utils/supabase';
+import { upsertUserProfile } from '../../lib/firestore';
 import { AudioController } from '../shared/AudioController';
 import { audioManager as audioSynth } from "../../utils/audioManager";
 import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
@@ -764,7 +764,7 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                                 localStorage.setItem('aya_topic_survey_done', 'true');
                                 if (profile?.id && !profile.id.startsWith('offline-')) {
                                     useUserStore.getState().setProfile({ ...profile, topic_survey_completed: true });
-                                    supabase.from('users').update({ topic_survey_completed: true }).eq('id', profile.id).catch(() => {});
+                                    upsertUserProfile(profile.id, { topicSurveyCompleted: true }).catch(() => {});
                                 }
                                 // Force a re-render to hide it
                                 setHighlightedNodeId('refresh');

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useUserStore } from '../../store/userStore';
 import { audioManager as audioSynth } from "../../utils/audioManager";
 import { Flame, Briefcase, Eye, Shield, Award, Zap, Check, ChevronLeft } from 'lucide-react';
-import { supabase } from '../../utils/supabase';
+import { logAnalyticsEvent, upsertPersonalityProfile, upsertUserProfile } from '../../lib/firestore';
 import { markQuizDone } from '../../utils/session';
 import { logJourneyEvent } from '../../utils/feedbackUtils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -259,24 +259,20 @@ export function PersonalityAssessment() {
             setIsSaving(true);
             try {
                 if (userProfile?.id) {
-                    const qrData: any = {
-                        user_id: userProfile.id,
+                    // Log quiz responses to Firestore analytics
+                    logAnalyticsEvent('quiz_responses', {
+                        userId: userProfile.id,
                         responses: {
                             question_1: newAnswers[0] || '',
                             question_2: newAnswers[1] || '',
                             question_3: newAnswers[2] || '',
                             question_4: newAnswers[3] || '',
                             question_5: newAnswers[4] || '',
-                            question_6: newAnswers[5] || ''
+                            question_6: newAnswers[5] || '',
                         }
-                    };
-                    const { error: qrError } = await supabase.from('quiz_responses').insert([qrData]);
-                    if (qrError && qrError.code === '23503') {
-                        qrData.user_id = null;
-                        await supabase.from('quiz_responses').insert([qrData]).catch(() => {});
-                    }
+                    });
 
-                    // Save unified DNA profile to Supabase
+                    // Save unified DNA profile to Firestore
                     await saveUserDnaProfile({
                         userId: userProfile.id,
                         traits: newTraits,
@@ -285,47 +281,40 @@ export function PersonalityAssessment() {
                         storiesCompleted: userProfile.stories_completed || 0,
                     }).catch(err => console.warn('[PersonalityAssessment] saveUserDnaProfile notice:', err));
 
-                    const ppData: any = {
-                        user_id: userProfile.id,
-                        mobile: userProfile.mobile,
-                        trait_risk_taker: Math.round(newTraits.risk),
-                        trait_creative: Math.round(newTraits.creativity),
-                        trait_analytical: Math.round(newTraits.vision),
-                        trait_social: Math.round(newTraits.empathy),
-                        trait_ambitious: Math.round(newTraits.leadership),
-                        interest_goal: newProfile.interest_goal || '',
-                        interest_struggle: newProfile.interest_struggle || '',
-                        interest_domain: newProfile.interest_domain || ''
-                    };
-                    
-                    const { error: ppError } = await supabase.from('personality_profiles').upsert([ppData], { onConflict: 'user_id' });
-                    if (ppError && ppError.code === '23503') {
-                        ppData.user_id = null;
-                        await supabase.from('personality_profiles').insert([ppData]).catch(() => {});
-                    }
+                    // Save personality profile to Firestore
+                    await upsertPersonalityProfile(userProfile.id, {
+                        traitRiskTaker: Math.round(newTraits.risk),
+                        traitCreative: Math.round(newTraits.creativity),
+                        traitAnalytical: Math.round(newTraits.vision),
+                        traitSocial: Math.round(newTraits.empathy),
+                        traitAmbitious: Math.round(newTraits.leadership),
+                        interestGoal: newProfile.interest_goal || '',
+                        interestStruggle: newProfile.interest_struggle || '',
+                        interestDomain: newProfile.interest_domain || '',
+                    });
 
-                    // Also record on users table
-                    await supabase.from('users').update({
-                        onboarding_scores: {
+                    // Update user doc in Firestore
+                    await upsertUserProfile(userProfile.id, {
+                        onboardingScores: {
                             risk: newTraits.risk,
                             creativity: newTraits.creativity,
                             vision: newTraits.vision,
                             empathy: newTraits.empathy,
-                            leadership: newTraits.leadership
+                            leadership: newTraits.leadership,
                         },
-                        gameplay_scores: {
+                        gameplayScores: {
                             risk: newTraits.risk,
                             creativity: newTraits.creativity,
                             vision: newTraits.vision,
                             empathy: newTraits.empathy,
-                            leadership: newTraits.leadership
-                        }
-                    }).eq('id', userProfile.id).catch(() => {});
+                            leadership: newTraits.leadership,
+                        },
+                    }).catch(() => {});
 
                     markQuizDone();
                 }
             } catch (err) {
-                console.error("Failed to save to Supabase", err);
+                console.error('Failed to save personality assessment to Firestore', err);
             } finally {
                 if (audioSynth.playLevelComplete) audioSynth.playLevelComplete();
 

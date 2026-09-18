@@ -1,0 +1,15 @@
+{
+  "name": "aya-wishlist-notify",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev src/index.ts",
+    "deploy": "wrangler deploy src/index.ts",
+    "secrets:set": "wrangler secret put TELEGRAM_BOT_TOKEN && wrangler secret put TELEGRAM_WISHLIST_CHAT_ID && wrangler secret put ALLOWED_ORIGIN"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240909.0",
+    "typescript": "~5.5.0",
+    "wrangler": "^3.80.0"
+  }
+}

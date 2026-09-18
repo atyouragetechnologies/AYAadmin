@@ -3,7 +3,7 @@ import { CHECKIN_TAGS } from '../../config/recommendationConfig';
 import { detectCrisis } from '../../services/crisisDetection';
 import { SafetyCard } from './SafetyCard';
 import { useUserStore } from '../../store/userStore';
-import { supabase } from '../../utils/supabase';
+import { logAnalyticsEvent } from '../../lib/firestore';
 import { Sparkles, MessageSquare, ChevronRight, X } from 'lucide-react';
 import type { CheckInData, CrisisRiskLevel } from '../../types/ayaTypes';
 
@@ -82,18 +82,18 @@ export const CheckInCard: React.FC<CheckInCardProps> = ({ onCheckInComplete, onC
                 updateSessionPreference(tag, 2.0);
             });
 
-            // Persist check-in to Supabase if authenticated user
+            // Persist check-in to Firestore if authenticated user
             if (profile?.id && !profile.id.startsWith('offline-')) {
-                await supabase.from('user_checkins').insert({
-                    user_id: profile.id,
-                    situation_tags: selectedSituations,
-                    problem_tags: selectedSituations,
-                    emotional_tags: selectedEmotions,
-                    intent_tags: selectedIntents,
-                    free_text: freeText.trim() || null,
+                logAnalyticsEvent('user_checkins', {
+                    userId: profile.id,
+                    situationTags: selectedSituations,
+                    problemTags: selectedSituations,
+                    emotionalTags: selectedEmotions,
+                    intentTags: selectedIntents,
+                    freeText: freeText.trim() || null,
                     intensity: intensity,
-                    crisis_risk_level: crisisResult.riskLevel,
-                    is_crisis: crisisResult.isCrisis
+                    crisisRiskLevel: crisisResult.riskLevel,
+                    isCrisis: crisisResult.isCrisis
                 });
             }
 

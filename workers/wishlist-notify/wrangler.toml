@@ -1,0 +1,14 @@
+name = "aya-wishlist-notify"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+account_id = "de1041307075246ab0f31e4c9c0b66dd"
+
+# Secrets (set via: wrangler secret put TELEGRAM_BOT_TOKEN)
+# TELEGRAM_BOT_TOKEN
+# TELEGRAM_WISHLIST_CHAT_ID
+# ALLOWED_ORIGIN            (e.g. https://aya.atyouragetechnologies.com)
+
+[observability]
+enabled = true

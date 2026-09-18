@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useUserStore } from '../../store/userStore';
 import { logJourneyFeedback } from '../../utils/feedbackUtils';
-import { supabase } from '../../utils/supabase';
+import { logAnalyticsEvent } from '../../lib/firestore';
 import { Sparkles, ThumbsUp, ThumbsDown, Check, ArrowRight } from 'lucide-react';
 import './PostJourneyFeedback.css';
 
@@ -97,13 +97,13 @@ export function PostJourneyFeedback({
 
     try {
       if (!user.id.startsWith('offline-')) {
-        await supabase.from('story_reflections').insert({
-          user_id: user.id,
-          story_id: journeyId,
-          reflection_text: reflectionText.trim() || null,
-          selected_chips: selectedChips,
-          was_relevant: wasRelevant,
-          did_help: true,
+        logAnalyticsEvent('story_reflections', {
+          userId: user.id,
+          storyId: journeyId,
+          reflectionText: reflectionText.trim() || null,
+          selectedChips: selectedChips,
+          wasRelevant: wasRelevant,
+          didHelp: true,
         });
       }
 

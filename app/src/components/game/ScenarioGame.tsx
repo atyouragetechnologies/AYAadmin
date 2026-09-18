@@ -9,12 +9,11 @@ import { AnalysisMascotModal } from './AnalysisMascotModal';
 import { InsightLoadingScreen } from './InsightLoadingScreen';
 import { MascotLoader } from '../ui/MascotLoader';
 import { isNativeApp, playHaptic } from '../../hooks/useNativeFeatures';
-import { Network } from '@capacitor/network';
 
 import { useJourneyTracking } from '../../hooks/useJourneyTracking';
 import type { Level, Lesson } from '../../types/gameTypes';
 import clsx from 'clsx';
-import { supabase } from '../../utils/supabase';
+import { upsertUserProfile, upsertPersonalityProfile } from '../../lib/firestore';
 import { logJourneyEvent } from '../../utils/feedbackUtils';
 import { STORY_DATABASE } from '../../data/scenarios';
 import { IDOL_PROFILES } from '../../data/idolMindsets';
@@ -272,59 +271,8 @@ export function ScenarioGame({ level, onComplete, onBack, onDailyChallengeComple
             const targetId = level?.scenarioId || 'lvl_age_19';
             
             try {
-                if (isNativeApp) {
-                    const status = await Network.getStatus();
-                    if (!status.connected) {
-                        throw new Error("Offline Mode: Skipping Supabase fetch");
-                    }
-                }
-                
-                const { data, error } = await supabase.from('scenarios').select('*').eq('id', targetId).maybeSingle();
-                
-                if (error || !data) {
-                    throw new Error("Supabase fetch failed or returned null");
-                }
-                
-                // Merge local audio & emotion fields into Supabase frames (Supabase may not have latest emotion/audio)
-                const localData = STORY_DATABASE[targetId];
-                const mergedFrames = data.frames.map((frame: any) => {
-                    if (localData) {
-                        const localFrame = localData.frames.find((lf: any) => lf.id === frame.id);
-                        const updatedFrame = { ...frame };
-                        if (localFrame?.emotion) {
-                            updatedFrame.emotion = localFrame.emotion;
-                        }
-                        if (localFrame?.audio) {
-                            updatedFrame.audio = localFrame.audio;
-                        }
-                        if (localFrame?.audio_hi) {
-                            updatedFrame.audio_hi = localFrame.audio_hi;
-                        }
-                        if (localFrame?.bg) {
-                            updatedFrame.bg = localFrame.bg;
-                        }
-                        if (localFrame?.bgSize) {
-                            updatedFrame.bgSize = localFrame.bgSize;
-                        }
-                        if (localFrame?.bgPosition) {
-                            updatedFrame.bgPosition = localFrame.bgPosition;
-                        }
-                        return updatedFrame;
-                    }
-                    return frame;
-                });
-                
-                setScenario({
-                    id: data.id,
-                    title: data.title,
-                    source: data.source,
-                    frames: mergedFrames
-                });
-                setIsLoadingScenario(false);
-            } catch (err) {
-                console.warn("[Scenario] Falling back to local story data due to Supabase error or Offline Mode:", err);
-                
-                // Fallback to local data
+                // Stories now come from local STORY_DATABASE (synced via CDN/bundle)
+                // Firestore does not store scenario frames — use local data directly
                 const localData = STORY_DATABASE[targetId];
                 if (localData) {
                     setScenario({
@@ -337,10 +285,15 @@ export function ScenarioGame({ level, onComplete, onBack, onDailyChallengeComple
                     setScenario({ frames: [{ id: 'intro', text: 'Scenario coming soon.', choices: [] }] });
                 }
                 setIsLoadingScenario(false);
+            } catch (err) {
+                console.warn('[Scenario] Story load error:', err);
+                setScenario({ frames: [{ id: 'intro', text: 'Scenario coming soon.', choices: [] }] });
+                setIsLoadingScenario(false);
             }
         };
         fetchScenario();
     }, [level?.scenarioId]);
+
 
     const safeScenario = scenario || { frames: [{ id: 'intro', text: 'LOADING...', choices: [] }] };
     const frame = safeScenario.frames.find((f: any) => f.id === currentFrameId) || safeScenario.frames[0];
@@ -673,7 +626,7 @@ export function ScenarioGame({ level, onComplete, onBack, onDailyChallengeComple
                 } catch (e) {}
 
                 if (userProfile?.id && !userProfile.id.startsWith('offline-')) {
-                    supabase.from('users').update({ choice_history: choiceHistory }).eq('id', userProfile.id).catch(() => {});
+                    upsertUserProfile(userProfile.id, { choiceHistory }).catch(() => {});
                 }
 
             // 1. Calculate active session deltas from the choices just made
@@ -933,37 +886,35 @@ export function ScenarioGame({ level, onComplete, onBack, onDailyChallengeComple
                                     ...currentLevelScores,
                                     [level.id]: Math.max(currentLevelScores[level.id] || 0, starCount)
                                 };
-                                await supabase.from('users').update({
-                                    total_xp: newTotalXp,
+                                await upsertUserProfile(activeUserId, {
+                                    totalXp: newTotalXp,
                                     level: newLevelInfo.level,
-                                    stories_completed: currentStories + 1,
-                                    story_count: newStoryCount,
-                                    gameplay_scores: newGameplayScores,
-                                    level_scores: updatedLevelScores,
-                                }).eq('id', activeUserId);
+                                    storiesCompleted: currentStories + 1,
+                                    storyCount: newStoryCount,
+                                    gameplayScores: newGameplayScores,
+                                    levelScores: updatedLevelScores,
+                                });
 
-                                await supabase.from('personality_profiles').upsert({
-                                    user_id: activeUserId,
-                                    trait_risk_taker: recalibratedTraits.risk,
-                                    trait_creative: recalibratedTraits.creativity,
-                                    trait_analytical: recalibratedTraits.vision,
-                                    trait_social: recalibratedTraits.empathy,
-                                    trait_ambitious: recalibratedTraits.leadership,
-                                    total_xp: newTotalXp,
+                                await upsertPersonalityProfile(activeUserId, {
+                                    traitRiskTaker: recalibratedTraits.risk,
+                                    traitCreative: recalibratedTraits.creativity,
+                                    traitAnalytical: recalibratedTraits.vision,
+                                    traitSocial: recalibratedTraits.empathy,
+                                    traitAmbitious: recalibratedTraits.leadership,
+                                    totalXp: newTotalXp,
                                     level: newLevelInfo.level,
-                                    stories_completed: currentStories + 1,
-                                    last_updated: new Date().toISOString(),
-                                    future_archetype: futureMatchResult.archetype.name,
-                                    future_archetype_score: futureMatchResult.score,
-                                    life_resilience: futureLT.resilience,
-                                    life_discipline: futureLT.discipline,
-                                    life_courage: futureLT.courage,
-                                    life_creativity: futureLT.creativity,
-                                    life_emotional_control: futureLT.emotional_control,
-                                    life_leadership: futureLT.leadership,
-                                    life_risk_intelligence: futureLT.risk_intelligence,
-                                    life_consistency: futureLT.consistency,
-                                }, { onConflict: 'user_id' });
+                                    storiesCompleted: currentStories + 1,
+                                    futureArchetype: futureMatchResult.archetype.name,
+                                    futureArchetypeScore: futureMatchResult.score,
+                                    lifeResilience: futureLT.resilience,
+                                    lifeDiscipline: futureLT.discipline,
+                                    lifeCourage: futureLT.courage,
+                                    lifeCreativity: futureLT.creativity,
+                                    lifeEmotionalControl: futureLT.emotional_control,
+                                    lifeLeadership: futureLT.leadership,
+                                    lifeRiskIntelligence: futureLT.risk_intelligence,
+                                    lifeConsistency: futureLT.consistency,
+                                });
                                 setSaveStatus('saved');
                             } catch (fallbackErr) {
                                 console.error('[AYA] Fallback writes also failed:', fallbackErr);
@@ -974,12 +925,12 @@ export function ScenarioGame({ level, onComplete, onBack, onDailyChallengeComple
                     try {
                         const streakResult = completeDailyChallenge(true);
                         if (streakResult && streakResult.newStreak > streakResult.oldStreak && activeUserId && !activeUserId.startsWith('offline-')) {
-                            await supabase.from('users').update({
-                                current_streak: streakResult.newStreak,
-                                longest_streak: Math.max(activeProfile?.longest_streak || 0, streakResult.newStreak),
-                                last_active_date: new Date().toISOString().split('T')[0],
-                                daily_challenge_completed: true
-                            }).eq('id', activeUserId);
+                            await upsertUserProfile(activeUserId, {
+                                currentStreak: streakResult.newStreak,
+                                longestStreak: Math.max(activeProfile?.longest_streak || 0, streakResult.newStreak),
+                                lastActiveDate: new Date().toISOString().split('T')[0],
+                                dailyChallengeCompleted: true,
+                            });
                             if (onDailyChallengeComplete) onDailyChallengeComplete(streakResult);
                         }
                     } catch (e) { console.error('[AYA] streak update threw:', e); }

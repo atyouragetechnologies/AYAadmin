@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '../../utils/supabase';
+import { db } from '../../lib/firestore';
+import { collection, getDocs, writeBatch, doc, query, orderBy } from 'firebase/firestore';
 import { Tag, Search, Sparkles, User, Calendar, X, ChevronRight, RefreshCw, Check } from 'lucide-react';
 import { generateLevels } from '../../utils/levelGenerator';
 import { resolvePersonalityAvatar } from '../../utils/avatarUtils';
@@ -63,15 +64,14 @@ export function StoryTagsExplorer() {
         setLoading(true);
         const localTags = buildLocalMetadataTags();
         try {
-            const { data, error } = await supabase
-                .from('story_tags')
-                .select('*')
-                .order('tag_name', { ascending: true });
-
-            if (!error && data && data.length > 0) {
+            const snap = await getDocs(query(collection(db, 'story_tags'), orderBy('tag_name', 'asc')));
+            if (!snap.empty) {
                 const mergedMap = new Map<string, StoryTagItem>();
                 localTags.forEach(t => mergedMap.set(`${t.story_id}:::${t.tag_name}`, t));
-                data.forEach((t: StoryTagItem) => mergedMap.set(`${t.story_id}:::${t.tag_name}`, t));
+                snap.docs.forEach(d => {
+                    const t = ({ id: d.id, ...d.data() } as unknown) as StoryTagItem;
+                    mergedMap.set(`${t.story_id}:::${t.tag_name}`, t);
+                });
                 setTagsData(Array.from(mergedMap.values()));
             } else {
                 setTagsData(localTags);
@@ -84,12 +84,17 @@ export function StoryTagsExplorer() {
         }
     };
 
-    const handleSyncToSupabase = async () => {
+    const handleSyncToFirestore = async () => {
         setIsSyncing(true);
         try {
             const localTags = buildLocalMetadataTags();
-            const { error } = await supabase.from('story_tags').upsert(localTags, { onConflict: 'story_id,tag_name' });
-            if (error) throw error;
+            // Batch write to Firestore story_tags collection
+            const batch = writeBatch(db);
+            localTags.forEach(tag => {
+                const docId = `${tag.story_id}___${tag.tag_name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                batch.set(doc(db, 'story_tags', docId), tag, { merge: true });
+            });
+            await batch.commit();
             setSyncSuccess(true);
             setTimeout(() => setSyncSuccess(false), 3000);
             loadTags();
@@ -180,10 +185,10 @@ export function StoryTagsExplorer() {
                 {/* Search Bar & Sync Button */}
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={handleSyncToSupabase}
+                        onClick={handleSyncToFirestore}
                         disabled={isSyncing}
                         className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 transition-all disabled:opacity-50"
-                        title="Sync local tags to Supabase story_tags table"
+                        title="Sync local tags to Firestore story_tags collection"
                     >
                         {syncSuccess ? (
                             <>
@@ -193,7 +198,7 @@ export function StoryTagsExplorer() {
                         ) : (
                             <>
                                 <RefreshCw size={14} className={isSyncing ? "animate-spin text-[#00f2ff]" : "text-purple-300"} />
-                                <span>{isSyncing ? 'Syncing...' : 'Sync to Supabase'}</span>
+                                <span>{isSyncing ? 'Syncing...' : 'Sync to Firestore'}</span>
                             </>
                         )}
                     </button>

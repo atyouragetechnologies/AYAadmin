@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../utils/supabase';
+import { getUserProfile, upsertUserProfile } from '../lib/firestore';
+import { auth } from '../lib/firebase';
 import { useUserStore } from '../store/userStore';
 
 export const useSubscription = () => {
@@ -17,7 +18,7 @@ export const useSubscription = () => {
 
     const updateTrialStateFromDates = useCallback((startStr?: string | null, endStr?: string | null, isUsed: boolean = false, accessType?: string | null) => {
         const paid = Boolean(
-            accessType && 
+            accessType &&
             ['aya_plus', 'aya_plus_monthly', 'aya_plus_quarterly', 'aya_plus_annual', 'premium', 'premium_pro', 'jee15', 'neet15', 'upsc'].includes(accessType)
         );
         setIsPaid(paid);
@@ -53,14 +54,12 @@ export const useSubscription = () => {
             setHasTrialAvailable(false);
             setIsPremium(active);
         } else if (isUsed) {
-            // Trial was used in past but dates not recorded
             setIsTrialActive(false);
             setTrialUsed(true);
             setHasTrialAvailable(false);
             setIsPremium(false);
             setDaysRemaining(0);
         } else {
-            // First time user: trial is available to start
             setIsTrialActive(false);
             setTrialUsed(false);
             setHasTrialAvailable(true);
@@ -75,34 +74,27 @@ export const useSubscription = () => {
         const localUsed = !!profile?.trial_used;
         const accessType = profile?.access_type || null;
 
-        if (!profile?.id || profile.id.startsWith('offline-')) {
+        const uid = auth.currentUser?.uid || profile?.id;
+        if (!uid || uid.startsWith('offline-')) {
             updateTrialStateFromDates(localStart, localEnd, localUsed, accessType);
             setLoading(false);
             return;
         }
 
         try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('trial_used, trial_start_date, trial_end_date, access_type, created_at')
-                .eq('id', profile.id)
-                .single();
-
-            if (error) {
-                updateTrialStateFromDates(localStart, localEnd, localUsed, accessType);
-                return;
-            }
-
+            const data = await getUserProfile(uid);
             if (data) {
                 updateTrialStateFromDates(
-                    data.trial_start_date, 
-                    data.trial_end_date, 
-                    !!data.trial_used, 
-                    data.access_type || accessType
+                    (data as any).trialStartDate ?? localStart,
+                    (data as any).trialEndDate ?? localEnd,
+                    !!(data as any).trialUsed,
+                    (data as any).accessType ?? accessType
                 );
+            } else {
+                updateTrialStateFromDates(localStart, localEnd, localUsed, accessType);
             }
         } catch (err) {
-            console.error('Error checking trial status:', err);
+            console.error('Error checking trial status from Firestore:', err);
             updateTrialStateFromDates(localStart, localEnd, localUsed, accessType);
         } finally {
             setLoading(false);
@@ -119,25 +111,21 @@ export const useSubscription = () => {
         const startIso = now.toISOString();
         const endIso = endDate.toISOString();
 
-        if (profile?.id && !profile.id.startsWith('offline-')) {
+        const uid = auth.currentUser?.uid || profile?.id;
+        if (uid && !uid.startsWith('offline-')) {
             try {
-                const { error } = await supabase
-                    .from('users')
-                    .update({
-                        trial_used: true,
-                        trial_start_date: startIso,
-                        trial_end_date: endIso,
-                        access_type: 'trial',
-                    })
-                    .eq('id', profile.id);
-
-                if (error) console.error('Error activating trial in Supabase:', error);
+                await upsertUserProfile(uid, {
+                    trialUsed: true,
+                    trialStartDate: startIso,
+                    trialEndDate: endIso,
+                    accessType: 'trial',
+                });
             } catch (err) {
-                console.error('Error activating trial:', err);
+                console.error('Error activating trial in Firestore:', err);
             }
         }
 
-        // Update Zustand Store Profile
+        // Update Zustand store
         const currentProfile = useUserStore.getState().profile;
         if (currentProfile) {
             useUserStore.getState().setProfile({
@@ -149,20 +137,20 @@ export const useSubscription = () => {
             });
         }
 
-        // Update local state
         updateTrialStateFromDates(startIso, endIso, true, 'trial');
         setIsTrialActive(true);
         setHasTrialAvailable(false);
         setTrialUsed(true);
         setIsPremium(true);
 
-        // Telemetry logging
-        const targetUserId = profile?.id;
-        if (targetUserId) {
-            import('../utils/feedbackUtils').then(({ logJourneyEvent }) => {
-                logJourneyEvent(targetUserId, 'app_system', 'trial_activated', {
-                    trial_start_date: startIso,
-                    trial_end_date: endIso,
+        // Telemetry
+        if (uid) {
+            import('../lib/firestore').then(({ logAnalyticsEvent }) => {
+                logAnalyticsEvent('journey_events', {
+                    userId: uid,
+                    journeyId: 'app_system',
+                    eventType: 'trial_activated',
+                    eventData: { trialStartDate: startIso, trialEndDate: endIso },
                 });
             }).catch(() => {});
         }
@@ -185,5 +173,3 @@ export const useSubscription = () => {
         refreshTrialStatus: checkTrialStatus
     };
 };
-
-

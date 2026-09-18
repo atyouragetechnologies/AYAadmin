@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Crown, Sparkles, Check, X, ShieldCheck } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
-import { supabase } from '../../utils/supabase';
+import { upsertUserProfile, logAnalyticsEvent } from '../../lib/firestore';
 import { audioManager } from '../../utils/audioManager';
 import { useSubscription } from '../../hooks/useSubscription';
 
@@ -26,13 +26,18 @@ export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
         // Record subscription in database if authenticated
         if (profile?.id && !profile.id.startsWith('offline-')) {
             try {
-                await supabase.from('subscriptions').upsert({
-                    user_id: profile.id,
+                const expiresAt = new Date(Date.now() + (plan === 'annual' ? 365 : 30) * 86400000).toISOString();
+                await upsertUserProfile(profile.id, {
+                    accessType: 'aya_plus',
+                    accessStartDate: new Date().toISOString(),
+                });
+                logAnalyticsEvent('subscriptions', {
+                    userId: profile.id,
                     tier: 'plus',
                     status: 'active',
-                    starts_at: new Date().toISOString(),
-                    expires_at: new Date(Date.now() + (plan === 'annual' ? 365 : 30) * 86400000).toISOString(),
-                }, { onConflict: 'user_id' });
+                    startsAt: new Date().toISOString(),
+                    expiresAt,
+                });
             } catch (err) {
                 console.warn('[AyaPlus] Subscriptions insert error:', err);
             }

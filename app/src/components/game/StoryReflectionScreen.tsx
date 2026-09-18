@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, Zap, Target, Compass, Heart } from 'lucide-react';
 import { getStoryMetadata } from '../../services/storyMetadataRegistry';
 import { useUserStore } from '../../store/userStore';
-import { supabase } from '../../utils/supabase';
+import { logAnalyticsEvent } from '../../lib/firestore';
 import { audioManager } from '../../utils/audioManager';
 import type { DissonanceInsight, PsychometricScores } from '../../types/gameTypes';
 
@@ -85,16 +85,16 @@ export function StoryReflectionScreen({
 
         if (profile?.id && !profile.id.startsWith('offline-')) {
             try {
-                await supabase.from('reflections_and_actions').insert({
-                    user_id: profile.id,
-                    scenario_id: scenarioId,
-                    decision_selected: choiceMade?.text || choiceMade?.feedbackTitle || 'Selected Option',
-                    dissonance_detected: dissonance.hasDissonance,
-                    dissonance_insight: dissonance.description,
-                    micro_action_committed: hasCommittedAction ? (meta.microActionPrompt || 'Committed to real-life action') : null,
-                    action_completed: hasCommittedAction,
-                    relevance_rating: relevanceRating || 4,
-                    user_notes: userNotes || null,
+                logAnalyticsEvent('reflections_and_actions', {
+                    userId: profile.id,
+                    scenarioId: scenarioId,
+                    decisionSelected: choiceMade?.text || choiceMade?.feedbackTitle || 'Selected Option',
+                    dissonanceDetected: dissonance.hasDissonance,
+                    dissonanceInsight: dissonance.description,
+                    microActionCommitted: hasCommittedAction ? (meta.microActionPrompt || 'Committed to real-life action') : null,
+                    actionCompleted: hasCommittedAction,
+                    relevanceRating: relevanceRating || 4,
+                    userNotes: userNotes || null,
                 });
             } catch (err) {
                 console.warn('[StoryReflection] DB insert warning:', err);

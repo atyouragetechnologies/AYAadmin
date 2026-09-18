@@ -1,4 +1,3 @@
-import { supabase } from './supabase';
 import { useUserStore } from '../store/userStore';
 
 // ---------------------------------------------------------------------------
@@ -181,31 +180,31 @@ export async function logNotificationStatus(
   const targetId = userId || useUserStore.getState().profile?.id || localStorage.getItem('aya_user_id') || null;
   if (!targetId) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.id) {
-        await supabase.from('users').update({
-          notifications_enabled: enabled,
-          notification_permission: permissionState,
-          notification_updated_at: new Date().toISOString()
-        }).eq('id', user.id);
+      const { auth } = await import('../lib/firebase');
+      const user = auth.currentUser;
+      if (user?.uid) {
+        const { upsertUserProfile } = await import('../lib/firestore');
+        await upsertUserProfile(user.uid, {
+          notificationsEnabled: enabled,
+          notificationPermission: permissionState,
+          notificationUpdatedAt: new Date().toISOString(),
+        });
       }
     } catch (e) {
-      console.warn('[Push] Notice logging notification status to Supabase:', e);
+      console.warn('[Push] Notice logging notification status to Firestore:', e);
     }
     return;
   }
 
   try {
-    const { error } = await supabase.from('users').update({
-      notifications_enabled: enabled,
-      notification_permission: permissionState,
-      notification_updated_at: new Date().toISOString()
-    }).eq('id', targetId);
-    if (error) {
-      console.warn('[Push] Notice updating user notification status:', error.message);
-    }
+    const { upsertUserProfile } = await import('../lib/firestore');
+    await upsertUserProfile(targetId, {
+      notificationsEnabled: enabled,
+      notificationPermission: permissionState,
+      notificationUpdatedAt: new Date().toISOString(),
+    });
   } catch (err) {
-    console.warn('[Push] Error updating user notification status in Supabase:', err);
+    console.warn('[Push] Error updating user notification status in Firestore:', err);
   }
 }
 
@@ -378,8 +377,9 @@ async function _subscribeUserToPushInternal(passedUserId?: string): Promise<Push
 
   if (!targetUserId) {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) targetUserId = authUser.id;
+      const { auth } = await import('../lib/firebase');
+      const authUser = auth.currentUser;
+      if (authUser) targetUserId = authUser.uid;
     } catch (e) {
       console.warn('[Push] Auth check warning:', e);
     }
@@ -496,8 +496,9 @@ export async function syncExistingSubscriptionIfGranted(): Promise<void> {
         console.log('[Push Boot] Found existing subscription on boot — syncing with backend...');
         let targetUserId: string | null = useUserStore.getState().profile?.id || localStorage.getItem('aya_user_id') || null;
         if (!targetUserId) {
-          const { data: { user: authUser } } = await supabase.auth.getUser();
-          if (authUser) targetUserId = authUser.id;
+          const { auth } = await import('../lib/firebase');
+          const authUser = auth.currentUser;
+          if (authUser) targetUserId = authUser.uid;
         }
         await fetch('/api/subscribe-push', {
           method: 'POST',

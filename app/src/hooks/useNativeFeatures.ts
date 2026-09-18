@@ -8,7 +8,6 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { TextZoom } from '@capacitor/text-zoom';
 import { Network } from '@capacitor/network';
 import { PushNotifications } from '@capacitor/push-notifications';
-import { supabase } from '../utils/supabase';
 
 /** True when running inside the Capacitor Android/iOS app (not a browser tab) */
 export const isNativeApp = Capacitor.isNativePlatform();
@@ -67,14 +66,16 @@ export function useNativeFeatures() {
               console.log('[Push] FCM Token received: ', token.value);
               localStorage.setItem('aya_fcm_token', token.value);
 
-              // If user is logged in, attach to their profile in Supabase
+              // If user is logged in, attach FCM token to their Firebase profile
               try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                  await supabase.from('users').update({ fcm_token: token.value }).eq('auth_user_id', session.user.id);
+                const { auth } = await import('../lib/firebase');
+                const { saveFcmToken } = await import('../lib/firestore');
+                const user = auth.currentUser;
+                if (user) {
+                  await saveFcmToken(user.uid, token.value, 'android');
                 }
               } catch (fcmErr) {
-                console.warn('[Push] fcm_token update skipped (column may not exist yet):', fcmErr);
+                console.warn('[Push] FCM token save skipped:', fcmErr);
               }
             });
 

@@ -5,7 +5,7 @@
  * Saves notification requests and provides aggregate demand data for Admins.
  */
 
-import { supabase } from '../utils/supabase';
+import { logAnalyticsEvent } from '../lib/firestore';
 import { CHECKIN_TAGS } from '../config/recommendationConfig';
 import { STORY_METADATA, type StoryMetadata } from '../data/storyMetadata';
 
@@ -67,41 +67,16 @@ export async function logStoryRequest(
     try {
         const cleanUserId = userId && !userId.startsWith('offline-') ? userId : null;
         
-        let { data, error } = await supabase
-            .from('story_requests')
-            .insert({
-                user_id: cleanUserId,
-                requested_tag: requestedTag,
-                requested_problem: requestedProblem || requestedTag,
-                requested_age: age,
-                status: 'active',
-            })
-            .select('id')
-            .maybeSingle();
+        // Log to Firestore analytics collection
+        logAnalyticsEvent('story_requests', {
+            userId: cleanUserId,
+            requestedTag: requestedTag,
+            requestedProblem: requestedProblem || requestedTag,
+            requestedAge: age,
+            status: 'active',
+        });
 
-        // If requested_age column doesn't exist yet or foreign key fails, fallback gracefully
-        if (error) {
-            const retryPayload: any = {
-                user_id: null,
-                requested_tag: requestedTag,
-                requested_problem: requestedProblem || requestedTag,
-                status: 'active',
-            };
-            const retry = await supabase
-                .from('story_requests')
-                .insert(retryPayload)
-                .select('id')
-                .maybeSingle();
-            data = retry.data;
-            error = retry.error;
-        }
-
-        if (error) {
-            console.warn('[storyRequestService] Supabase insert note (stored locally):', error.message);
-            return { success: true };
-        }
-
-        return { success: true, id: data?.id };
+        return { success: true };
     } catch (err) {
         console.warn('[storyRequestService] Stored locally:', err);
         return { success: true };
@@ -112,76 +87,60 @@ export async function logStoryRequest(
  * Fetch aggregated story request demand for the Admin dashboard.
  */
 export async function getStoryRequestsSummary(): Promise<StoryRequestSummary[]> {
+    // Reads from localStorage only (server-side analytics are in Firestore)
+    const rows: any[] = [];
+
     try {
-        const { data, error } = await supabase
-            .from('story_requests')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        const rows: any[] = (error || !data) ? [] : [...data];
-
-        // Also merge any offline/local requests if available
-        try {
-            const localStored = JSON.parse(localStorage.getItem('aya_user_story_requests') || '[]');
-            localStored.forEach((lr: any) => {
-                if (!rows.some(r => r.requested_tag === lr.tag && (r.requested_age === lr.age || !r.requested_age))) {
-                    rows.push({
-                        requested_tag: lr.tag,
-                        requested_problem: lr.problem,
-                        requested_age: lr.age || 18,
-                        created_at: lr.timestamp || new Date().toISOString(),
-                        status: 'active'
-                    });
-                }
+        const localStored = JSON.parse(localStorage.getItem('aya_user_story_requests') || '[]');
+        localStored.forEach((lr: any) => {
+            rows.push({
+                requested_tag: lr.tag,
+                requested_problem: lr.problem,
+                requested_age: lr.age || 18,
+                created_at: lr.timestamp || new Date().toISOString(),
+                status: 'active'
             });
-        } catch {}
-
-        if (rows.length === 0) return [];
-
-        // Aggregate by tag
-        const summaryMap: Record<string, {
-            requested_problem?: string;
-            count: number;
-            most_recent: string;
-            status: string;
-            ageCounts: Record<number, number>;
-        }> = {};
-
-        rows.forEach((row) => {
-            const tag = row.requested_tag;
-            const age = row.requested_age || 18;
-
-            if (!summaryMap[tag]) {
-                summaryMap[tag] = {
-                    requested_problem: row.requested_problem || tag,
-                    count: 0,
-                    most_recent: row.created_at || new Date().toISOString(),
-                    status: row.status || 'active',
-                    ageCounts: {}
-                };
-            }
-            summaryMap[tag].count += 1;
-            summaryMap[tag].ageCounts[age] = (summaryMap[tag].ageCounts[age] || 0) + 1;
-
-            if (row.created_at && new Date(row.created_at) > new Date(summaryMap[tag].most_recent)) {
-                summaryMap[tag].most_recent = row.created_at;
-            }
         });
+    } catch {}
 
-        return Object.entries(summaryMap).map(([requested_tag, info]) => ({
-            requested_tag,
-            requested_problem: info.requested_problem,
-            count: info.count,
-            most_recent: info.most_recent,
-            status: info.status,
-            ages: Object.keys(info.ageCounts).map(Number).sort((a, b) => a - b),
-            ageCounts: info.ageCounts,
-        })).sort((a, b) => b.count - a.count);
+    if (rows.length === 0) return [];
 
-    } catch (err) {
-        console.error('[storyRequestService] Error fetching request summary:', err);
-        return [];
-    }
+    const summaryMap: Record<string, {
+        requested_problem?: string;
+        count: number;
+        most_recent: string;
+        status: string;
+        ageCounts: Record<number, number>;
+    }> = {};
+
+    rows.forEach((row) => {
+        const tag = row.requested_tag;
+        const age = row.requested_age || 18;
+        if (!summaryMap[tag]) {
+            summaryMap[tag] = {
+                requested_problem: row.requested_problem || tag,
+                count: 0,
+                most_recent: row.created_at || new Date().toISOString(),
+                status: row.status || 'active',
+                ageCounts: {}
+            };
+        }
+        summaryMap[tag].count += 1;
+        summaryMap[tag].ageCounts[age] = (summaryMap[tag].ageCounts[age] || 0) + 1;
+        if (row.created_at && new Date(row.created_at) > new Date(summaryMap[tag].most_recent)) {
+            summaryMap[tag].most_recent = row.created_at;
+        }
+    });
+
+    return Object.entries(summaryMap).map(([requested_tag, info]) => ({
+        requested_tag,
+        requested_problem: info.requested_problem,
+        count: info.count,
+        most_recent: info.most_recent,
+        status: info.status,
+        ages: Object.keys(info.ageCounts).map(Number).sort((a, b) => a - b),
+        ageCounts: info.ageCounts,
+    })).sort((a, b) => b.count - a.count);
 }
 
 /**

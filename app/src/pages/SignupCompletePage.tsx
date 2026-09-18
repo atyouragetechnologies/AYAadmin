@@ -8,7 +8,7 @@ import { AgeSelector } from '../components/auth/AgeSelector';
 import { useUsernameAvailability } from '../hooks/useUsernameAvailability';
 import { authService } from '../services/authService';
 import { useUserStore } from '../store/userStore';
-import { supabase } from '../utils/supabase';
+import { auth } from '../lib/firebase';
 import { audioManager as audioSynth } from '../utils/audioManager';
 
 export function SignupCompletePage() {
@@ -31,30 +31,28 @@ export function SignupCompletePage() {
 
     useEffect(() => {
         if (!profile) {
-            supabase.auth.getSession().then((resp: any) => {
-                const session = resp.data?.session;
-                if (session?.user) {
-                    const defaultName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Player';
-                    useUserStore.getState().setProfile({
-                        id: session.user.id,
-                        auth_user_id: session.user.id,
-                        username: undefined,
-                        name: defaultName,
-                        email: session.user.email,
-                        mobile: session.user.phone || null,
-                        onboarding_complete: false,
-                        age: 18,
-                        total_xp: 0,
-                        level: 1,
-                        stories_completed: 0,
-                        current_streak: 0,
-                        longest_streak: 0,
-                        daily_challenge_completed: false,
-                        assessmentCompleted: false,
-                        traits: { discipline: 50, resilience: 50, risk: 50, leadership: 50, creativity: 50, empathy: 50, vision: 50 },
-                    } as any);
-                }
-            });
+            const fbUser = auth.currentUser;
+            if (fbUser) {
+                const defaultName = fbUser.displayName || fbUser.email?.split('@')[0] || 'Player';
+                useUserStore.getState().setProfile({
+                    id: fbUser.uid,
+                    auth_user_id: fbUser.uid,
+                    username: undefined,
+                    name: defaultName,
+                    email: fbUser.email,
+                    mobile: fbUser.phoneNumber || null,
+                    onboarding_complete: false,
+                    age: 18,
+                    total_xp: 0,
+                    level: 1,
+                    stories_completed: 0,
+                    current_streak: 0,
+                    longest_streak: 0,
+                    daily_challenge_completed: false,
+                    assessmentCompleted: false,
+                    traits: { discipline: 50, resilience: 50, risk: 50, leadership: 50, creativity: 50, empathy: 50, vision: 50 },
+                } as any);
+            }
         }
 
         if (profile?.onboarding_complete && profile?.username && profile?.assessmentCompleted) {

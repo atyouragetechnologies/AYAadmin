@@ -5,7 +5,8 @@ import { audioManager as audioSynth } from "../utils/audioManager";
 import { bgmManager } from '../utils/bgmManager';
 import { Volume2, VolumeX, Trash2, AlertTriangle, Bell, Compass, Lock, RotateCcw } from 'lucide-react';
 import clsx from 'clsx';
-import { supabase } from '../utils/supabase';
+import { auth } from '../lib/firebase';
+import { upsertUserProfile } from '../lib/firestore';
 import { clearAllUserData } from '../utils/session';
 import { subscribeToPush, getNotificationSupportStatus, getExistingSubscription, logNotificationStatus } from '../utils/pushNotifications';
 
@@ -98,11 +99,11 @@ export function SettingsPage() {
         if (profile) {
             setProfile({ ...profile, preferred_map: newPreferredMap });
             try {
-                await supabase.from('users').update({ 
-                    preferred_map: newPreferredMap
-                }).eq('id', profile.id);
+                if (profile.id) {
+                    await upsertUserProfile(profile.id, { preferredMap: newPreferredMap });
+                }
             } catch (err) {
-                console.error("Failed to update profile in Supabase", err);
+                console.error('Failed to update profile in Firestore', err);
             }
             useUserStore.getState().syncLevels();
             navigate('/game');
@@ -117,8 +118,9 @@ export function SettingsPage() {
 
         try {
             if (!isGuest && profile?.id) {
-                const { data: { session } } = await supabase.auth.getSession();
-                const token = session?.access_token;
+                // Get Firebase ID token for the delete-account API
+                const fbUser = auth.currentUser;
+                const token = fbUser ? await fbUser.getIdToken().catch(() => null) : null;
 
                 let apiSuccess = false;
                 try {
@@ -141,19 +143,13 @@ export function SettingsPage() {
                     console.warn('[DeleteAccount] Endpoint fetch failed, using DB fallback:', fetchErr);
                 }
 
-                // Fallback direct DB soft-delete if API endpoint didn't succeed
+                // Fallback direct DB soft-delete via upsertUserProfile
                 if (!apiSuccess) {
-                    const { error: dbError } = await supabase
-                        .from('users')
-                        .update({ status: 'deactivated', deleted_at: new Date().toISOString() })
-                        .eq('id', profile.id);
-                    if (dbError) {
-                        throw new Error(`Database error: ${dbError.message}`);
-                    }
+                    await upsertUserProfile(profile.id, { status: 'deactivated', deletedAt: new Date().toISOString() });
                 }
 
                 try {
-                    await supabase.auth.signOut();
+                    await auth.signOut();
                 } catch {}
             }
 
@@ -170,6 +166,7 @@ export function SettingsPage() {
             setIsDeletingAccount(false);
         }
     };
+
 
     const handleEnablePush = async () => {
         audioSynth.playClick();

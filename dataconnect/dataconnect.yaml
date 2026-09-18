@@ -1,0 +1,13 @@
+specVersion: "v1alpha"
+serviceId: "atyourage-e78ff-service"
+location: "asia-south1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      cloudSql:
+        instanceId: "atyourage-e78ff-instance"
+      database: "atyourage-e78ff-database"
+      schemaValidation: "COMPATIBLE"
+connectorDirs:
+  - "./connector"

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
-import { supabase } from '../utils/supabase';
+import { logAnalyticsEvent } from '../lib/firestore';
 import { getSessionId } from '../utils/session';
 import { useUserStore } from '../store/userStore';
 import clsx from 'clsx';
@@ -63,10 +63,10 @@ export function SearchBar({ personalities, onMatch, onClose }: SearchBarProps) {
         session_id: getSessionId() || undefined,
       });
 
-      // Also log to search_logs for Admin Search Analytics
-      await supabase.from('search_logs').insert({
+      // Also log to analytics for Admin Search Analytics
+      logAnalyticsEvent('search_logs', {
         query: query.trim().toLowerCase(),
-        query_original: query.trim(),
+        queryOriginal: query.trim(),
         matched: !!matchedPersonality,
       });
     } catch (err) {
