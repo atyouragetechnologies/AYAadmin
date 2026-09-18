@@ -15,7 +15,7 @@ const handlers: Record<string, () => Promise<any>> = {
   "/api/fcm-tokens": () => import("../app/api/fcm-tokens"),
   "/api/set-username": () => import("../app/api/set-username"),
   "/api/subscribe-push": () => import("../app/api/subscribe-push"),
-  "/api/wishlist-telegram-notify": () => import("../app/api/wishlist-telegram-notify"),
+
   "/api/verify-cashfree-order": () => import("../app/api/verify-cashfree-order"),
   // Daily quota system
   "/api/quota-status": () => import("../app/api/quota-status"),
