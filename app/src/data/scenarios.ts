@@ -231,8 +231,8 @@ export const STORY_DATABASE: Record<string, any> = {
                 text: "You score 114 at Perth, one of the greatest hundreds ever seen in Australia. The world realizes a 19-year-old boy is the best batsman on the planet.",
                 choices: [
                     {
-                        text: "Complete Level",
-                        next: 'COMPLETE',
+                        text: "Next Chapter",
+                        next: 'LEARNING_SACHIN',
                         score: 10,
                         feedbackTitle: "Mission Accomplished",
                         feedback: ""
@@ -360,8 +360,8 @@ export const STORY_DATABASE: Record<string, any> = {
                 text: "You make it to Stanford. Decades later, your quiet obsession with computing leads you to build Google Chrome, and eventually become the CEO of Alphabet.",
                 choices: [
                     {
-                        text: "Complete Level",
-                        next: 'COMPLETE',
+                        text: "Next Chapter",
+                        next: 'LEARNING_SUNDAR',
                         score: 10,
                         feedbackTitle: "Mission Accomplished",
                         feedback: ""
@@ -494,8 +494,8 @@ export const STORY_DATABASE: Record<string, any> = {
                 text: "Your television success propels you to Mumbai. With zero film connections and immense hustle, you go on to conquer Bollywood and become its undisputed King.",
                 choices: [
                     {
-                        text: "Complete Level",
-                        next: 'COMPLETE',
+                        text: "Next Chapter",
+                        next: 'LEARNING_SRK',
                         score: 10,
                         feedbackTitle: "Mission Accomplished",
                         feedback: ""
@@ -639,8 +639,8 @@ export const STORY_DATABASE: Record<string, any> = {
                 text: "From that day on, you never compromised on cricket. You went on to lead India to historic victories globally.",
                 choices: [
                     {
-                        text: "Complete Level",
-                        next: 'COMPLETE',
+                        text: "Next Chapter",
+                        next: 'LEARNING_VIRAT',
                         score: 10,
                         feedbackTitle: "Mission Accomplished",
                         feedback: ""
@@ -783,8 +783,8 @@ export const STORY_DATABASE: Record<string, any> = {
                 text: "You eventually go to Madras Institute of Technology. You go on to build India's first satellite launch vehicle and serve as the People's President.",
                 choices: [
                     {
-                        text: "Complete Level",
-                        next: 'COMPLETE',
+                        text: "Next Chapter",
+                        next: 'LEARNING_KALAM',
                         score: 10,
                         feedbackTitle: "Mission Accomplished",
                         feedback: ""
@@ -914,8 +914,8 @@ export const STORY_DATABASE: Record<string, any> = {
                 text: "You returned to India and eventually led the Tata Group, launching the Indica, acquiring JLR, and operating with deep empathy.",
                 choices: [
                     {
-                        text: "Complete Level",
-                        next: 'COMPLETE',
+                        text: "Next Chapter",
+                        next: 'LEARNING_TATA',
                         score: 10,
                         feedbackTitle: "Mission Accomplished",
                         feedback: ""
@@ -1039,6 +1039,15 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'email_fail',
+                emotion: 'hope',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_taylor_bus.webp',
+                text: "Your mass emails get buried in overflowing inboxes. Radio DJs delete generic pitches. You need a personal connection.",
+                choices: [
+                    { text: "Try Again", next: 'tour_grind', score: -5, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'success',
                 emotion: 'hope',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/avatar_taylor_swift.webp',
@@ -1091,6 +1100,15 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'grades_fail',
+                emotion: 'grief',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_zuck_dorm.webp',
+                text: "You stayed at Harvard and aced your exams, but other networks took over the market. Speed is everything in tech.",
+                choices: [
+                    { text: "Try Again", next: 'intro', score: -5, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'palo_alto',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_zuck_pool.webp',
                 text: "You're renting a house with Sean Parker. Yahoo offers to buy you for $1 Billion. Everyone tells you to take it.",
@@ -1109,6 +1127,15 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Conviction",
                         feedback: "History was made. Mark famously walked out of the meeting because he knew the potential was trillions, not billions."
                     }
+                ]
+            },
+            {
+                id: 'sell_out',
+                emotion: 'grief',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_zuck_pool.webp',
+                text: "You took the cash and walked away. The buyer shelved the project a year later. You had wealth, but lost your life's work.",
+                choices: [
+                    { text: "Try Again", next: 'palo_alto', score: -5, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -1131,6 +1158,15 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Meritocracy",
                         feedback: "You built a culture where ability mattered more than appearance. Facebook shipped faster than anyone else."
                     }
+                ]
+            },
+            {
+                id: 'culture_fail',
+                emotion: 'tension',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/scenario_office.webp',
+                text: "You rejected him based on appearance. He went to a competitor and built what could have been your flagship infrastructure.",
+                choices: [
+                    { text: "Try Again", next: 'growth', score: -5, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -1215,6 +1251,15 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'compromise',
+                emotion: 'loneliness',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_taylor_room.webp',
+                text: "The producer watered down your raw emotional edge. The tracks lost the vulnerability that made them special.",
+                choices: [
+                    { text: "Try Again", next: 'solo_write', score: -5, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'success',
                 emotion: 'triumph',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/avatar_taylor_swift.webp',
@@ -1294,6 +1339,14 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Mastery",
                         feedback: "You didn't cheat the grind. That's why you became a legend."
                     }
+                ]
+            },
+            {
+                id: 'rivalry',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_kobe_gym.webp',
+                text: "Focusing on others creates unnecessary friction and blinds you to your own growth.",
+                choices: [
+                    { text: "Refocus Mindset", next: 'gym', score: 0, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -1532,6 +1585,14 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'safe_art',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_frida_bed.webp',
+                text: "Your safe paintings blend into the background. You feel empty inside.",
+                choices: [
+                    { text: "Paint From The Soul", next: 'paint', score: 0, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'success',
                 emotion: 'wonder',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/avatar_frida.webp',
@@ -1585,6 +1646,14 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'too_late',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_gates_dorm.webp',
+                text: "While you attended lectures, others grabbed the market. The software wave passed you by.",
+                choices: [
+                    { text: "Seize The Moment", next: 'intro', score: 0, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'bluff',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_gates_dorm.webp',
                 text: "They want a demo in 3 weeks. You have nothing written. You and Paul Allen ignore all your classes.",
@@ -1603,6 +1672,14 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Obsession",
                         feedback: "Bill famously fell asleep on his keyboard, woke up, and kept typing. That intensity won the race."
                     }
+                ]
+            },
+            {
+                id: 'slow_fail',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_gates_dorm.webp',
+                text: "The deadline arrives and the demo isn't ready. MITS goes with another company.",
+                choices: [
+                    { text: "Crunch Time", next: 'bluff', score: 0, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -1625,6 +1702,14 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Leverage",
                         feedback: "You bought Q-DOS for $50k, licensed it to IBM for millions, and kept the rights to sell it to others. The smartest deal ever made."
                     }
+                ]
+            },
+            {
+                id: 'missed_boat',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_gates_boardroom.webp',
+                text: "IBM walked away and signed with Digital Research. You lost the deal of a lifetime.",
+                choices: [
+                    { text: "Find Another Angle", next: 'ibm_deal', score: 0, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -1681,6 +1766,14 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'employee',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_jobs_garage.webp',
+                text: "HP bought the schematics and put you in a cubicle. Your dream was reduced to a 9-to-5.",
+                choices: [
+                    { text: "Take The Risk", next: 'intro', score: 0, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'byte_shop',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_jobs_store.webp',
                 text: "The Byte Shop offers to buy 50 computers... giving you barely enough cash for parts.",
@@ -1699,6 +1792,14 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Cash Flow Logic",
                         feedback: "You convinced suppliers to give you parts based on the purchase order. You funded the company on pure salesmanship."
                     }
+                ]
+            },
+            {
+                id: 'slow_growth',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_jobs_store.webp',
+                text: "Family money ran out fast, and you couldn't scale order fulfillment in time.",
+                choices: [
+                    { text: "Negotiate Credit", next: 'byte_shop', score: 0, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -1721,6 +1822,14 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Product Vision",
                         feedback: "You treated the computer like an appliance, not a toy for geeks. This opened the market to normal people."
                     }
+                ]
+            },
+            {
+                id: 'generic_pc',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/scenario_office.webp',
+                text: "The machine was cluttered and complicated. Only hardcore hobbyists bought it.",
+                choices: [
+                    { text: "Insist On Perfection", next: 'vision', score: 0, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -1777,6 +1886,14 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'normal_life',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_disney_studio_old.webp',
+                text: "You draw dull political cartoons for minimum wage. Your imagination slowly withers.",
+                choices: [
+                    { text: "Follow The Dream", next: 'intro', score: 0, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'hollywood',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_disney_train.webp',
                 text: "You lose the rights to your first hit character, 'Oswald the Rabbit'. Your partners betray you.",
@@ -1795,6 +1912,14 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Creativity",
                         feedback: "Instead of panicking, Walt sketched Mickey Mouse. The rest is history."
                     }
+                ]
+            },
+            {
+                id: 'legal_battle',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_disney_train.webp',
+                text: "The lawyers drained your last dollars while the studio kept churning out Oswald cartoons.",
+                choices: [
+                    { text: "Create Something New", next: 'hollywood', score: 0, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -1851,6 +1976,14 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'robot',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_oprah_newsroom.webp',
+                text: "You sound robotic and distant. Viewers switch channels, and your contract isn't renewed.",
+                choices: [
+                    { text: "Be Yourself", next: 'intro', score: 0, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'fired',
                 emotion: 'triumph',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_oprah_talkshow.webp',
@@ -1870,6 +2003,14 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Finding Flow",
                         feedback: "As soon as you sat in that chair, you realized: 'This is what I was born to do.'"
                     }
+                ]
+            },
+            {
+                id: 'quit',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_oprah_talkshow.webp',
+                text: "You let a temporary setback convince you that your broadcasting career was over.",
+                choices: [
+                    { text: "Give It A Shot", next: 'fired', score: 0, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -1926,6 +2067,14 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'rent_poor',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_musk_office.webp',
+                text: "Rent ate all your capital in 2 months. The servers went dark before launch.",
+                choices: [
+                    { text: "Cut Costs Completely", next: 'intro', score: 0, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'grind',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_musk_coding.webp',
                 text: "An investor drops by unexpected at 7 AM. You are asleep on the floor.",
@@ -1944,6 +2093,14 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Dedication",
                         feedback: "He saw how committed you were. He wrote a check for $3 million."
                     }
+                ]
+            },
+            {
+                id: 'shame',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_musk_coding.webp',
+                text: "The investor saw you cowering, lost all confidence in leadership, and walked out.",
+                choices: [
+                    { text: "Stand Tall", next: 'grind', score: 0, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -1998,6 +2155,14 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'nap',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_rowling_train_window.webp',
+                text: "You slept the afternoon away. When you awoke in London, the magical spark had vanished.",
+                choices: [
+                    { text: "Let Imagination Roam", next: 'intro', score: 0, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'idea',
                 emotion: 'determination',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_rowling_train_carriage.webp',
@@ -2017,6 +2182,14 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Mental Palace",
                         feedback: "By not writing immediately, the details grew richer in her imagination."
                     }
+                ]
+            },
+            {
+                id: 'shy',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_rowling_train_carriage.webp',
+                text: "Too intimidated to ask, you let anxiety disrupt your concentration, muddying the concept.",
+                choices: [
+                    { text: "Hold It In Memory", next: 'idea', score: 0, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -2333,6 +2506,14 @@ export const STORY_DATABASE: Record<string, any> = {
                 ]
             },
             {
+                id: 'diluted',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_shelley_writing.webp',
+                text: "The cautionary moral preaching made the story forgettable and toothless.",
+                choices: [
+                    { text: "Unleash The Horror", next: 'monster_idea', score: 0, feedbackTitle: "", feedback: "" }
+                ]
+            },
+            {
                 id: 'success',
                 emotion: 'fear',
                 bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/avatar_mary_shelley.webp',
@@ -2413,6 +2594,14 @@ export const STORY_DATABASE: Record<string, any> = {
                         feedbackTitle: "Fake It 'Til You Make It",
                         feedback: "You wore a suit, carried a briefcase, and pretended you worked there. Security waved you in every day for months."
                     }
+                ]
+            },
+            {
+                id: 'hiding',
+                bg: 'https://aya-assets-proxy.atyouragetechnologies.workers.dev/assets/bg_spielberg_office.webp',
+                text: "A security guard caught you hiding behind a desk and escorted you off the premises.",
+                choices: [
+                    { text: "Act Like You Belong", next: 'sneak', score: 0, feedbackTitle: "", feedback: "" }
                 ]
             },
             {
@@ -5617,8 +5806,8 @@ export const STORY_DATABASE: Record<string, any> = {
                 text: "You silenced the critics not with words, but with a bat. You proved that early failure is just the entry fee for greatness.",
                 choices: [
                     {
-                        text: "Complete Level",
-                        next: 'COMPLETE',
+                        text: "Next Chapter",
+                        next: 'LEARNING_SHUBMAN',
                         score: 10,
                         feedbackTitle: "Mission Accomplished",
                         feedback: ""
@@ -5825,8 +6014,8 @@ export const STORY_DATABASE: Record<string, any> = {
                 text: "You face the elite. With your refined speed and flawless preparation, you conquer the chess world, winning the World Championship 5 times across all formats.",
                 choices: [
                     {
-                        text: "Complete Level",
-                        next: 'COMPLETE',
+                        text: "Next Chapter",
+                        next: 'LEARNING_ANAND',
                         score: 10,
                         feedbackTitle: "Mission Accomplished",
                         feedback: ""
@@ -5842,8 +6031,8 @@ export const STORY_DATABASE: Record<string, any> = {
                 text: "You became a legend not by copying the Europeans, but by forcing the world to respect the Indian style of play.",
                 choices: [
                     {
-                        text: "Complete Level",
-                        next: 'COMPLETE',
+                        text: "Next Chapter",
+                        next: 'LEARNING_ANAND',
                         score: 10,
                         feedbackTitle: "Mission Accomplished",
                         feedback: ""

@@ -152,6 +152,7 @@ export interface Level {
     placeholder?: boolean;
     portrait?: string;
     background?: string;
+    is_premium?: boolean;
 }
 
 export interface AccessCode {

@@ -296,7 +296,9 @@ export function ScenarioGame({ level, onComplete, onBack, onDailyChallengeComple
 
 
     const safeScenario = scenario || { frames: [{ id: 'intro', text: 'LOADING...', choices: [] }] };
-    const frame = safeScenario.frames.find((f: any) => f.id === currentFrameId) || safeScenario.frames[0];
+    const frame = safeScenario.frames.find((f: any) => f.id === currentFrameId) 
+        || safeScenario.frames.find((f: any) => f.id === frameHistory[frameHistory.length - 1]) 
+        || safeScenario.frames[0];
     const isLearningScreen = currentFrameId.startsWith('LEARNING') || currentFrameId === 'lesson' || currentFrameId.toLowerCase().includes('learning') || currentFrameId.toLowerCase().includes('lesson');
 
     // Preload all images for this scenario
@@ -1084,8 +1086,25 @@ export function ScenarioGame({ level, onComplete, onBack, onDailyChallengeComple
                 audioRef.current.pause();
                 audioRef.current.currentTime = 0;
             }
+            const targetNext = feedbackChoice.next;
+            if (targetNext === 'COMPLETE') {
+                setFeedbackChoice(null);
+                handleChoiceClick({
+                    text: feedbackChoice.text,
+                    next: 'COMPLETE',
+                    score: 0,
+                    feedbackTitle: '',
+                    feedback: ''
+                });
+                return;
+            }
             setFrameHistory(prev => [...prev, currentFrameId]);
-            setCurrentFrameId(feedbackChoice.next);
+            const targetExists = safeScenario.frames.some((f: any) => f.id === targetNext);
+            if (targetExists) {
+                setCurrentFrameId(targetNext);
+            } else {
+                console.warn(`[Scenario] Target frame '${targetNext}' not found. Staying on '${currentFrameId}'.`);
+            }
             setFeedbackChoice(null);
         }
     };

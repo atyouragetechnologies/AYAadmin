@@ -1,6 +1,7 @@
 import { useUserStore } from '../../store/userStore';
-import { Lock, Star, Settings, BookOpen } from 'lucide-react';
+import { Lock, Star, Settings, BookOpen, Zap } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import { canPlayStory, getRemainingFreeStories, isAyaPlusUser, FREE_DAILY_STORY_LIMIT } from '../../services/accessControl';
 
 import { createPortal } from 'react-dom';
 import { DISCLAIMER_TEXT } from './AntiGravityCanvas';
@@ -297,9 +298,46 @@ export function SolarMap({ onPlayLevel, onOpenDnaProfile, isMapActive = true }: 
         audioSynth.playStartup();
     }, [ageLevels.length]);
 
+    const remainingEnergy = getRemainingFreeStories(profile);
+    const isAyaPlus = isAyaPlusUser(profile);
+
     return (
         <div className="fixed inset-0 w-full h-[100dvh] bg-slate-950 overflow-hidden text-white">
             <AudioController isMapActive={isMapActive} />
+
+            {/* Freemium Energy Bar (Free-tier users only) */}
+            {!isAyaPlus && (
+                <div 
+                    onClick={() => {
+                        audioSynth.playClick();
+                        useUserStore.getState().setShowSubscriptionModal(true);
+                    }}
+                    className="absolute top-4 left-4 md:top-6 md:left-6 z-[110] flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-lg backdrop-blur-md pointer-events-auto transition-transform hover:scale-105 cursor-pointer bg-slate-900/90 border-[#FFB347]/30"
+                >
+                    <Zap className={clsx(
+                        "w-5 h-5 drop-shadow-sm",
+                        remainingEnergy > 0 ? "text-yellow-400 fill-yellow-400" : "text-slate-400 fill-slate-400"
+                    )} />
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-black uppercase tracking-wider mb-0.5 text-slate-400">
+                            Energy
+                        </span>
+                        <div className="flex gap-1">
+                            {Array.from({ length: FREE_DAILY_STORY_LIMIT }).map((_, i) => (
+                                <div 
+                                    key={i} 
+                                    className={clsx(
+                                        "w-2.5 h-2.5 rounded-full transition-all duration-300",
+                                        i < remainingEnergy 
+                                            ? "bg-[#FFB347] shadow-[0_0_8px_#FFB347]" 
+                                            : "bg-slate-700 shadow-inner"
+                                    )}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Daily Challenge Button */}
             <div className="absolute top-[130px] md:top-[80px] left-0 w-full flex justify-center z-[100] pointer-events-none px-2">
@@ -459,8 +497,14 @@ export function SolarMap({ onPlayLevel, onOpenDnaProfile, isMapActive = true }: 
                         {/* Nodes */}
                         {ageLevels.map((level, i) => {
                             const pos = getPosition(i);
-                            const isUnlocked = level.status !== 'locked';
+                            let isUnlocked = level.status !== 'locked';
                             const isCompleted = level.status === 'completed';
+
+                            const canPlayResult = canPlayStory(profile, level.is_premium || false);
+                            if (isUnlocked && !canPlayResult.allowed) {
+                                isUnlocked = false; // Lock visually if daily limit reached or premium
+                            }
+
                             const isCurrent = isUnlocked && !isCompleted;
 
                             return (
@@ -479,9 +523,12 @@ export function SolarMap({ onPlayLevel, onOpenDnaProfile, isMapActive = true }: 
                                             isCurrent && "animate-breath",
                                             !isUnlocked && "grayscale opacity-70"
                                         )}
-                                        onTouchStart={() => { if (isUnlocked) audioSynth.playHover(); }}
+                                        onTouchStart={() => { if (isUnlocked || !canPlayResult.allowed) audioSynth.playHover(); }}
                                         onClick={() => {
-                                            if (isUnlocked) {
+                                            if (!canPlayResult.allowed) {
+                                                audioSynth.playClick();
+                                                useUserStore.getState().setShowSubscriptionModal(true);
+                                            } else if (isUnlocked) {
                                                 audioSynth.playClick();
                                                 onPlayLevel(level);
                                             }
@@ -502,6 +549,17 @@ export function SolarMap({ onPlayLevel, onOpenDnaProfile, isMapActive = true }: 
                                                 </div>
                                             )}
                                         </div>
+
+                                        {/* Lock Tooltip */}
+                                        {!isUnlocked && (
+                                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50">
+                                                <div className="bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded shadow-xl border border-slate-700 whitespace-nowrap">
+                                                    {canPlayResult.reason === 'limit_reached' ? '🔒 Daily limit reached' 
+                                                     : canPlayResult.reason === 'premium_only' ? '⭐ Premium Story' 
+                                                     : '🔒 Locked'}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Glow under node */}
                                         <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-20 h-10 bg-black/50 blur-xl -z-10 rounded-full" />

@@ -598,12 +598,9 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                                 isUnlocked = level.day_number <= unlockedDays;
                             }
                             
-                            let canPlayResult: { allowed: boolean; reason?: 'limit_reached' | 'premium_only' } = { allowed: true };
-                            if (isUnlocked && !isCompleted) {
-                                canPlayResult = canPlayStory(profile, level.is_premium || false);
-                                if (!canPlayResult.allowed) {
-                                    isUnlocked = false; // Lock visually
-                                }
+                            const canPlayResult = canPlayStory(profile, level.is_premium || false);
+                            if (isUnlocked && !canPlayResult.allowed) {
+                                isUnlocked = false; // Lock visually if daily limit reached or premium
                             }
 
                             const isCurrent = isUnlocked && !isCompleted;
@@ -631,12 +628,12 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                                             if (isUnlocked || !canPlayResult.allowed) audioSynth.playHover();
                                         }}
                                         onClick={() => {
-                                            if (isUnlocked) {
-                                                audioSynth.playClick();
-                                                onPlayLevel(level);
-                                            } else if (!canPlayResult.allowed) {
+                                            if (!canPlayResult.allowed) {
                                                 audioSynth.playClick();
                                                 useUserStore.getState().setShowSubscriptionModal(true);
+                                            } else if (isUnlocked) {
+                                                audioSynth.playClick();
+                                                onPlayLevel(level);
                                             }
                                         }}
                                     >

@@ -12,6 +12,7 @@ import { DailyChallengeReveal } from '../components/game/DailyChallengeReveal';
 import { LevelUpCelebration } from '../components/game/LevelUpCelebration';
 import { calculateLevelInfo } from '../utils/levelSystem';
 import { generateLevels } from '../utils/levelGenerator';
+import { canPlayStory } from '../services/accessControl';
 
 import { useState } from 'react';
 import { X, Dna } from 'lucide-react';
@@ -120,6 +121,7 @@ export function IntroRouteHandler() {
     const { id } = useParams();
     const navigate = useNavigate();
     const levels = useUserStore((state) => state.levels);
+    const profile = useUserStore((state) => state.profile);
     
     let level = levels.find((l) => String(l.id) === String(id));
     if (!level) {
@@ -127,6 +129,12 @@ export function IntroRouteHandler() {
     }
     if (!level) {
         return <MascotLoader message="LOADING TIMELINE..." subMessage="Opening personality archives..." />;
+    }
+
+    const accessCheck = canPlayStory(profile, level.is_premium || false);
+    if (!accessCheck.allowed) {
+        useUserStore.getState().setShowSubscriptionModal(true);
+        return <Navigate to="/game" replace />;
     }
 
     return (
@@ -142,6 +150,7 @@ export function PlayRouteHandler() {
     const { id } = useParams();
     const navigate = useNavigate();
     const levels = useUserStore((state) => state.levels);
+    const profile = useUserStore((state) => state.profile);
     const completeLevel = useUserStore((state) => state.completeLevel);
     const unlockLevel = useUserStore((state) => state.unlockLevel);
     const setPendingStreakData = useUserStore((state) => state.setPendingStreakData);
@@ -152,6 +161,12 @@ export function PlayRouteHandler() {
     }
     if (!level) {
         return <MascotLoader message="ENTERING SIMULATION..." subMessage="Calibrating branching pathways..." />;
+    }
+
+    const accessCheck = canPlayStory(profile, level.is_premium || false);
+    if (!accessCheck.allowed) {
+        useUserStore.getState().setShowSubscriptionModal(true);
+        return <Navigate to="/game" replace />;
     }
 
     const handleComplete = (stars: number) => {
@@ -223,6 +238,7 @@ export function SelectionRouteHandler() {
     const { age } = useParams();
     const navigate = useNavigate();
     const levels = useUserStore((state) => state.levels);
+    const profile = useUserStore((state) => state.profile);
     
     if (!age) return <Navigate to="/game" replace />;
     const activeAge = parseInt(age, 10);
@@ -231,7 +247,14 @@ export function SelectionRouteHandler() {
         <CharacterSelection 
             age={activeAge}
             options={levels.filter(l => Number(l.age) === Number(activeAge))}
-            onSelect={(level) => navigate(`/game/intro/${level.id}`)}
+            onSelect={(level) => {
+                const accessCheck = canPlayStory(profile, level.is_premium || false);
+                if (!accessCheck.allowed) {
+                    useUserStore.getState().setShowSubscriptionModal(true);
+                    return;
+                }
+                navigate(`/game/intro/${level.id}`);
+            }}
             onBack={() => navigate('/game')} 
         />
     );
@@ -259,6 +282,7 @@ export function MoodRouteHandler() {
 export function DailyRevealRouteHandler() {
     const location = useLocation();
     const navigate = useNavigate();
+    const profile = useUserStore((state) => state.profile);
     const mood = location.state?.mood;
     
     if (!mood) return <Navigate to="/game" replace />;
@@ -267,7 +291,14 @@ export function DailyRevealRouteHandler() {
         <DailyChallengeReveal
             mood={mood}
             onClose={() => navigate(-1)}
-            onComplete={(level) => navigate(`/game/intro/${level.id}`)}
+            onComplete={(level) => {
+                const accessCheck = canPlayStory(profile, level.is_premium || false);
+                if (!accessCheck.allowed) {
+                    useUserStore.getState().setShowSubscriptionModal(true);
+                    return;
+                }
+                navigate(`/game/intro/${level.id}`);
+            }}
         />
     );
 }
