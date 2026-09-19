@@ -72,6 +72,26 @@ export function GameRoot() {
 
     useEffect(() => {
         const restoreSession = async () => {
+            // [TEST MODE] INSTANT BYPASS
+            const store = useUserStore.getState();
+            store.setProfile({
+                id: 'offline-test',
+                auth_user_id: 'offline-test',
+                name: 'Guest Tester',
+                age: 18,
+                mobile: '0000000000',
+                onboarding_complete: true,
+                assessmentCompleted: true,
+                tutorial_completed: true,
+                preferred_theme: 'city_dark',
+                access_type: 'free',
+                daily_free_stories: 0,
+                total_xp: 0,
+                isAdmin: true
+            } as any);
+            setSessionStatus('found');
+            return;
+
             setTimeout(() => setSessionStatus(prev => prev === 'checking' ? 'not_found' : prev), 10000);
             console.log('[Session] Checking for existing session...')
 
@@ -451,7 +471,7 @@ export function GameRoot() {
         return <MascotLoader message="LOADING YOUR UNIVERSE..." subMessage="Syncing your timeline..." />;
     }
 
-    if (!profile && location.pathname !== '/game/welcome' && location.pathname !== '/game/setup') {
+    if (!profile) {
         // [TEST MODE] Bypass login screen and auto-create an offline profile
         setTimeout(() => {
             useUserStore.getState().setProfile({
