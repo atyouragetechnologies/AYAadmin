@@ -452,7 +452,25 @@ export function GameRoot() {
     }
 
     if (!profile && location.pathname !== '/game/welcome' && location.pathname !== '/game/setup') {
-        return <Navigate to="/signin" replace />;
+        // [TEST MODE] Bypass login screen and auto-create an offline profile
+        setTimeout(() => {
+            useUserStore.getState().setProfile({
+                id: 'offline-test',
+                auth_user_id: 'offline-test',
+                name: 'Guest Tester',
+                age: 18,
+                mobile: '0000000000',
+                onboarding_complete: true,
+                assessmentCompleted: true,
+                tutorial_completed: true,
+                preferred_theme: 'city_dark',
+                access_type: 'free',
+                daily_free_stories: 0,
+                total_xp: 0,
+                isAdmin: true
+            } as any);
+        }, 0);
+        return <MascotLoader message="ENTERING TEST MODE..." subMessage="Bypassing login..." />;
     }
 
     if (profile && profile.assessmentCompleted && (location.pathname === '/game/welcome' || location.pathname === '/game/setup')) {
