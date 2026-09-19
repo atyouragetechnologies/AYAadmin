@@ -97,6 +97,12 @@ interface UserState {
     showSubscriptionModal: boolean;
     setShowSubscriptionModal: (show: boolean) => void;
 
+    // Energy Modal State
+    showEnergyModal: boolean;
+    setShowEnergyModal: (show: boolean) => void;
+    energyPreviewLevel: Level | null;
+    setEnergyPreviewLevel: (level: Level | null) => void;
+
     // Check-in State
     checkinData: import('../types/ayaTypes').CheckInData | null;
     setCheckinData: (data: import('../types/ayaTypes').CheckInData | null) => void;
@@ -179,8 +185,12 @@ export const useUserStore = create<UserState>()(
             levelScores: {},
             xp: 0, // Legacy fallback. New stats live on profile
             showSubscriptionModal: false,
-
             setShowSubscriptionModal: (show) => set({ showSubscriptionModal: show }),
+
+            showEnergyModal: false,
+            setShowEnergyModal: (show) => set({ showEnergyModal: show }),
+            energyPreviewLevel: null,
+            setEnergyPreviewLevel: (level) => set({ energyPreviewLevel: level }),
 
             addXp: (amount) => set((state) => ({ xp: state.xp + amount })),
 

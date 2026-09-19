@@ -1,5 +1,5 @@
 import { useUserStore } from '../../store/userStore';
-import { Lock, Star, Settings, BookOpen, Zap } from 'lucide-react';
+import { Lock, Star, Settings, BookOpen, Zap, Sparkles } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { canPlayStory, getRemainingFreeStories, isAyaPlusUser, FREE_DAILY_STORY_LIMIT } from '../../services/accessControl';
 
@@ -310,7 +310,8 @@ export function SolarMap({ onPlayLevel, onOpenDnaProfile, isMapActive = true }: 
                 <div 
                     onClick={() => {
                         audioSynth.playClick();
-                        useUserStore.getState().setShowSubscriptionModal(true);
+                        useUserStore.getState().setEnergyPreviewLevel(null);
+                        useUserStore.getState().setShowEnergyModal(true);
                     }}
                     className="absolute top-4 left-4 md:top-6 md:left-6 z-[110] flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-lg backdrop-blur-md pointer-events-auto transition-transform hover:scale-105 cursor-pointer bg-slate-900/90 border-[#FFB347]/30"
                 >
@@ -497,14 +498,15 @@ export function SolarMap({ onPlayLevel, onOpenDnaProfile, isMapActive = true }: 
                         {/* Nodes */}
                         {ageLevels.map((level, i) => {
                             const pos = getPosition(i);
-                            let isUnlocked = level.status !== 'locked';
+                            let isProgressionUnlocked = level.status !== 'locked';
                             const isCompleted = level.status === 'completed';
 
                             const canPlayResult = canPlayStory(profile, level.is_premium || false);
-                            if (isUnlocked && !canPlayResult.allowed) {
-                                isUnlocked = false; // Lock visually if daily limit reached or premium
-                            }
+                            const isEnergyLocked = isProgressionUnlocked && !canPlayResult.allowed && canPlayResult.reason === 'limit_reached';
+                            const isPremiumLocked = isProgressionUnlocked && !canPlayResult.allowed && canPlayResult.reason === 'premium_only';
+                            const isProgressionLocked = !isProgressionUnlocked;
 
+                            const isUnlocked = isProgressionUnlocked && canPlayResult.allowed;
                             const isCurrent = isUnlocked && !isCompleted;
 
                             return (
@@ -521,31 +523,63 @@ export function SolarMap({ onPlayLevel, onOpenDnaProfile, isMapActive = true }: 
                                         className={clsx(
                                             "relative cursor-pointer transition-transform group animate-float",
                                             isCurrent && "animate-breath",
-                                            !isUnlocked && "grayscale opacity-70"
+                                            isProgressionLocked && "grayscale opacity-70",
+                                            isEnergyLocked && "hover:scale-105"
                                         )}
                                         onTouchStart={() => { if (isUnlocked || !canPlayResult.allowed) audioSynth.playHover(); }}
                                         onClick={() => {
-                                            if (!canPlayResult.allowed) {
+                                            if (isEnergyLocked) {
+                                                audioSynth.playClick();
+                                                useUserStore.getState().setEnergyPreviewLevel(level);
+                                                useUserStore.getState().setShowEnergyModal(true);
+                                            } else if (isPremiumLocked) {
                                                 audioSynth.playClick();
                                                 useUserStore.getState().setShowSubscriptionModal(true);
                                             } else if (isUnlocked) {
                                                 audioSynth.playClick();
                                                 onPlayLevel(level);
+                                            } else {
+                                                audioSynth.playHover();
                                             }
                                         }}
                                     >
+                                        {/* Tomorrow Teaser Badge */}
+                                        {isEnergyLocked && (
+                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-30 px-2 py-0.5 rounded-full bg-[#FFB347] text-[#4a2e00] font-black text-[8px] md:text-[9px] uppercase tracking-wider shadow-lg whitespace-nowrap border border-[#fff0d4] flex items-center gap-1 animate-pulse">
+                                                <Sparkles size={10} className="fill-[#4a2e00]" /> UNLOCKS TOMORROW
+                                            </div>
+                                        )}
+
                                         {/* Avatar Ring */}
                                         <div className={clsx(
                                             "relative rounded-full overflow-hidden flex items-center justify-center bg-black transition-all duration-300",
                                             "w-16 h-16 md:w-24 md:h-24",
-                                            isCurrent 
-                                                ? "border-4 border-[#FFB347] ring-4 ring-[#FFB347]/30 shadow-[0_0_30px_rgba(255,179,71,0.8),0_10px_20px_rgba(0,0,0,0.8)]"
-                                                : "border-transparent ring-2 ring-[#FFB347]/50 shadow-[0_5px_15px_rgba(0,0,0,0.6)]"
+                                            isEnergyLocked
+                                                ? "border-4 border-[#FFB347] ring-4 ring-[#FFB347]/30 shadow-[0_0_25px_rgba(255,179,71,0.7)]"
+                                                : isCurrent 
+                                                    ? "border-4 border-[#FFB347] ring-4 ring-[#FFB347]/30 shadow-[0_0_30px_rgba(255,179,71,0.8),0_10px_20px_rgba(0,0,0,0.8)]"
+                                                    : "border-transparent ring-2 ring-[#FFB347]/50 shadow-[0_5px_15px_rgba(0,0,0,0.6)]"
                                         )}>
-                                            <img src={level.avatarUrl || resolvePersonalityAvatar(level.personality || '')} alt={level.archetype} className="w-full h-full object-cover" />
-                                            {!isUnlocked && (
+                                            <img 
+                                                src={level.portrait ? `https://aya-assets-proxy.atyouragetechnologies.workers.dev/portraits/${level.portrait}` : (level.avatarUrl || resolvePersonalityAvatar(level.personality || ''))} 
+                                                alt={level.archetype} 
+                                                className={clsx(
+                                                    "w-full h-full object-cover",
+                                                    isProgressionLocked && "grayscale opacity-70"
+                                                )} 
+                                                onError={(e) => { e.currentTarget.src = resolvePersonalityAvatar(level.personality || ''); }}
+                                            />
+                                            {isEnergyLocked && (
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none rounded-full" />
+                                            )}
+                                            {isProgressionLocked && (
                                                 <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
                                                     <Lock size={20} className="text-slate-400 opacity-80 md:w-6 md:h-6" />
+                                                </div>
+                                            )}
+                                            {isEnergyLocked && (
+                                                <div className="absolute top-1 right-1 z-20 bg-[#FFB347] text-[#4a2e00] p-1 rounded-full shadow-md border border-[#fff0d4]">
+                                                    <Lock size={11} className="stroke-[2.5]" />
                                                 </div>
                                             )}
                                         </div>
@@ -554,7 +588,7 @@ export function SolarMap({ onPlayLevel, onOpenDnaProfile, isMapActive = true }: 
                                         {!isUnlocked && (
                                             <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50">
                                                 <div className="bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded shadow-xl border border-slate-700 whitespace-nowrap">
-                                                    {canPlayResult.reason === 'limit_reached' ? '🔒 Daily limit reached' 
+                                                    {isEnergyLocked ? '🌙 Unlocks Tomorrow at 00:00 (Daily Story Energy)'
                                                      : canPlayResult.reason === 'premium_only' ? '⭐ Premium Story' 
                                                      : '🔒 Locked'}
                                                 </div>
@@ -568,15 +602,17 @@ export function SolarMap({ onPlayLevel, onOpenDnaProfile, isMapActive = true }: 
                                         <div className={clsx(
                                             "absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap z-30 transition-all duration-300 transform flex flex-col items-center",
                                             "md:-bottom-14",
-                                            isUnlocked ? "scale-100" : "scale-90"
+                                            isUnlocked ? "scale-100" : (isEnergyLocked ? "scale-100" : "scale-90")
                                         )}>
                                             {level.personality && (
                                                 <div className={clsx(
                                                     "relative -mb-2 px-3 py-0.5 rounded-full border shadow-sm flex items-center justify-center z-40",
                                                     "md:-mb-3 md:px-4 md:py-1 md:border-2",
-                                                    isUnlocked 
-                                                        ? (isCurrent ? "bg-[#FFB347] border-[#fff0d4] text-[#4a2e00] shadow-[0_0_15px_rgba(255,179,71,0.6)]" : "bg-[rgba(15,10,5,0.8)] border-[#FFB347]/50 text-[#FFB347] backdrop-blur-md shadow-[0_0_10px_rgba(255,179,71,0.2)]")
-                                                        : "bg-slate-900 border-slate-700 text-slate-500"
+                                                    isEnergyLocked
+                                                        ? "bg-[rgba(25,15,5,0.95)] border-2 border-[#FFB347] text-[#FFB347] shadow-[0_0_12px_rgba(255,179,71,0.5)]"
+                                                        : isUnlocked 
+                                                            ? (isCurrent ? "bg-[#FFB347] border-[#fff0d4] text-[#4a2e00] shadow-[0_0_15px_rgba(255,179,71,0.6)]" : "bg-[rgba(15,10,5,0.8)] border-[#FFB347]/50 text-[#FFB347] backdrop-blur-md shadow-[0_0_10px_rgba(255,179,71,0.2)]")
+                                                            : "bg-slate-900 border-slate-700 text-slate-500"
                                                 )}>
                                                     <span className="text-[10px] md:text-sm font-black uppercase drop-shadow-sm tracking-widest personality-name-label">
                                                         {level.personality}
@@ -585,17 +621,21 @@ export function SolarMap({ onPlayLevel, onOpenDnaProfile, isMapActive = true }: 
                                             )}
                                             <div className={clsx(
                                                 "px-4 py-1 pt-3 pb-1 md:px-6 md:py-2 md:pt-4 md:pb-2 rounded-xl shadow-2xl flex items-center justify-center min-w-[100px] md:min-w-[140px]",
-                                                isUnlocked
-                                                    ? (isCurrent 
-                                                        ? "bg-gradient-to-r from-[#FFB347] to-[#ff7b00] border-b-[3px] md:border-b-4 border-[#803d00]"
-                                                        : "bg-[rgba(15,10,5,0.85)] backdrop-blur-md border border-[#FFB347]/40 shadow-[0_0_20px_rgba(0,0,0,0.8)]")
-                                                    : "bg-slate-900/90 border-b-[3px] md:border-b-4 border-slate-950"
+                                                isEnergyLocked
+                                                    ? "bg-[rgba(20,12,5,0.95)] border border-[#FFB347]/70 shadow-[0_0_15px_rgba(255,179,71,0.25)]"
+                                                    : isUnlocked
+                                                        ? (isCurrent 
+                                                            ? "bg-gradient-to-r from-[#FFB347] to-[#ff7b00] border-b-[3px] md:border-b-4 border-[#803d00]"
+                                                            : "bg-[rgba(15,10,5,0.85)] backdrop-blur-md border border-[#FFB347]/40 shadow-[0_0_20px_rgba(0,0,0,0.8)]")
+                                                        : "bg-slate-900/90 border-b-[3px] md:border-b-4 border-slate-950"
                                             )}>
                                                 <span className={clsx(
                                                     "text-[10px] md:text-xs font-bold uppercase tracking-wider leading-none text-center story-title-label",
-                                                    isUnlocked 
-                                                        ? (isCurrent ? "text-white drop-shadow-md" : "text-[#fff0d4] drop-shadow-[0_0_5px_rgba(255,179,71,0.5)]")
-                                                        : "text-slate-500"
+                                                    isEnergyLocked
+                                                        ? "text-[#fff0d4] font-bold"
+                                                        : isUnlocked 
+                                                            ? (isCurrent ? "text-white drop-shadow-md" : "text-[#fff0d4] drop-shadow-[0_0_5px_rgba(255,179,71,0.5)]")
+                                                            : "text-slate-500"
                                                 )}>
                                                     {level.title}
                                                 </span>

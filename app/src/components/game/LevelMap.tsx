@@ -1,5 +1,5 @@
 import { useUserStore } from '../../store/userStore';
-import { Star, Lock, Zap } from 'lucide-react';
+import { Star, Lock, Zap, Sparkles } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -378,7 +378,8 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                 <div 
                     onClick={() => {
                         audioSynth.playClick();
-                        useUserStore.getState().setShowSubscriptionModal(true);
+                        useUserStore.getState().setEnergyPreviewLevel(null);
+                        useUserStore.getState().setShowEnergyModal(true);
                     }}
                     className={clsx(
                     "absolute top-4 left-4 md:top-6 md:left-6 z-[110] flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-lg backdrop-blur-md pointer-events-auto transition-transform hover:scale-105 cursor-pointer",
@@ -593,16 +594,18 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                             const pos = getPosition(i);
                             const isCompleted = level.status === 'completed' || (levelScores[level.id] !== undefined && levelScores[level.id] > 0);
                             
-                            let isUnlocked = level.status !== 'locked';
+                            let isProgressionUnlocked = level.status !== 'locked';
                             if (level.day_number !== undefined) {
-                                isUnlocked = level.day_number <= unlockedDays;
+                                isProgressionUnlocked = level.day_number <= unlockedDays;
                             }
                             
                             const canPlayResult = canPlayStory(profile, level.is_premium || false);
-                            if (isUnlocked && !canPlayResult.allowed) {
-                                isUnlocked = false; // Lock visually if daily limit reached or premium
-                            }
+                            const isEnergyLocked = isProgressionUnlocked && !canPlayResult.allowed && canPlayResult.reason === 'limit_reached';
+                            const isPremiumLocked = isProgressionUnlocked && !canPlayResult.allowed && canPlayResult.reason === 'premium_only';
+                            const isProgressionLocked = !isProgressionUnlocked;
 
+                            // For actual playability
+                            const isUnlocked = isProgressionUnlocked && canPlayResult.allowed;
                             const isCurrent = isUnlocked && !isCompleted;
                             const earnedStars = levelScores[level.id] || level.stars || 0;
 
@@ -619,7 +622,8 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                                         className={clsx(
                                             "candy-node-container group cursor-pointer hover:scale-110 transition-transform animate-float",
                                             isCurrent && "candy-node-active animate-breath",
-                                            !isUnlocked && "candy-node-locked grayscale opacity-80",
+                                            isProgressionLocked && "candy-node-locked grayscale opacity-75",
+                                            isEnergyLocked && "candy-node-energy-locked hover:scale-105",
                                             isCompleted && "candy-node-completed",
                                             highlightedNodeId === level.id && "ring-4 ring-[#00f2ff] ring-offset-4 ring-offset-transparent shadow-[0_0_30px_#00f2ff] rounded-full scale-110"
                                         )}
@@ -628,12 +632,18 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                                             if (isUnlocked || !canPlayResult.allowed) audioSynth.playHover();
                                         }}
                                         onClick={() => {
-                                            if (!canPlayResult.allowed) {
+                                            if (isEnergyLocked) {
+                                                audioSynth.playClick();
+                                                useUserStore.getState().setEnergyPreviewLevel(level);
+                                                useUserStore.getState().setShowEnergyModal(true);
+                                            } else if (isPremiumLocked) {
                                                 audioSynth.playClick();
                                                 useUserStore.getState().setShowSubscriptionModal(true);
                                             } else if (isUnlocked) {
                                                 audioSynth.playClick();
                                                 onPlayLevel(level);
+                                            } else {
+                                                audioSynth.playHover();
                                             }
                                         }}
                                     >
@@ -643,31 +653,58 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                                             "absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full transition-colors node-base",
                                             // Mobile: w-20 h-20, Desktop: w-28 h-28
                                             "w-20 h-20 md:w-28 md:h-28",
-                                            isCandyMode 
-                                                ? (isCurrent ? "bg-pink-100/50" : "bg-white/10")
-                                                : (isCurrent ? "bg-amber-400/20" : "bg-[#4DD9FF]/10")
+                                            isEnergyLocked
+                                                ? (isCandyMode ? "bg-amber-300/30" : "bg-amber-500/20 shadow-[0_0_25px_rgba(251,191,36,0.3)]")
+                                                : isCandyMode 
+                                                    ? (isCurrent ? "bg-pink-100/50" : "bg-white/10")
+                                                    : (isCurrent ? "bg-amber-400/20" : "bg-[#4DD9FF]/10")
                                         )} />
+
+                                        {/* Tomorrow Teaser Badge on top of node */}
+                                        {isEnergyLocked && (
+                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-30 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950 font-black text-[8px] md:text-[9px] uppercase tracking-wider shadow-lg whitespace-nowrap border border-yellow-200 flex items-center gap-1 animate-pulse">
+                                                <Sparkles size={10} className="fill-amber-950" /> UNLOCKS TOMORROW
+                                            </div>
+                                        )}
 
                                         {/* Responsive Avatar Ring */}
                                         <div className={clsx(
                                             "relative rounded-full overflow-hidden flex items-center justify-center bg-white node-ring transition-all duration-300",
                                             // Mobile: w-16 h-16, Desktop: w-24 h-24
                                             "w-16 h-16 md:w-24 md:h-24",
-                                            isCandyMode
-                                                ? (isCurrent ? "border-4 border-pink-400 ring-4 ring-pink-200 shadow-[0_0_20px_rgba(236,72,153,0.6)]" : "border-4 border-slate-300 shadow-[0_8px_0_rgba(0,0,0,0.2)]")
-                                                : (isCurrent 
-                                                    ? "border-4 border-amber-400 ring-4 ring-amber-400/30 shadow-[0_0_25px_rgba(245,158,11,0.8)]"
-                                                    : "border-transparent ring-2 ring-[#4DD9FF]/80 shadow-[0_0_15px_rgba(77,217,255,0.6)]")
+                                            isEnergyLocked
+                                                ? (isCandyMode 
+                                                    ? "border-4 border-amber-400 ring-4 ring-amber-200 shadow-[0_0_15px_rgba(251,191,36,0.5)]"
+                                                    : "border-4 border-amber-400 ring-4 ring-amber-400/30 shadow-[0_0_25px_rgba(245,158,11,0.7)]")
+                                                : isCandyMode
+                                                    ? (isCurrent ? "border-4 border-pink-400 ring-4 ring-pink-200 shadow-[0_0_20px_rgba(236,72,153,0.6)]" : "border-4 border-slate-300 shadow-[0_8px_0_rgba(0,0,0,0.2)]")
+                                                    : (isCurrent 
+                                                        ? "border-4 border-amber-400 ring-4 ring-amber-400/30 shadow-[0_0_25px_rgba(245,158,11,0.8)]"
+                                                        : "border-transparent ring-2 ring-[#4DD9FF]/80 shadow-[0_0_15px_rgba(77,217,255,0.6)]")
                                         )}>
                                             <img 
                                                 src={level.portrait ? `https://aya-assets-proxy.atyouragetechnologies.workers.dev/portraits/${level.portrait}` : (level.avatarUrl || resolvePersonalityAvatar(level.personality || ''))} 
                                                 alt={level.archetype} 
-                                                className="w-full h-full object-cover node-content" 
+                                                className={clsx(
+                                                    "w-full h-full object-cover node-content",
+                                                    isProgressionLocked && "grayscale opacity-75"
+                                                )} 
                                                 onError={(e) => { e.currentTarget.src = resolvePersonalityAvatar(level.personality || ''); }}
                                             />
-                                            {!isUnlocked && (
+                                            {/* Dark Vignette on bottom of energy locked avatar */}
+                                            {isEnergyLocked && (
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none rounded-full" />
+                                            )}
+                                            {/* Full lock overlay ONLY on progression locked */}
+                                            {isProgressionLocked && (
                                                 <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-200/50 sm:backdrop-blur-[1px]">
                                                     <Lock size={20} className="text-slate-500 drop-shadow-md opacity-80 md:w-6 md:h-6" />
+                                                </div>
+                                            )}
+                                            {/* Mini Lock Badge on energy locked */}
+                                            {isEnergyLocked && (
+                                                <div className="absolute top-1 right-1 z-20 bg-amber-500 text-amber-950 p-1 rounded-full shadow-md border border-amber-300">
+                                                    <Lock size={11} className="stroke-[2.5]" />
                                                 </div>
                                             )}
                                             <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/40 to-transparent pointer-events-none rounded-t-full" />
@@ -677,7 +714,7 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                                         {!isUnlocked && (
                                             <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50">
                                                 <div className="bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded shadow-xl border border-slate-700 whitespace-nowrap">
-                                                    {canPlayResult.reason === 'limit_reached' ? '🔒 Daily limit reached' 
+                                                    {isEnergyLocked ? '🌙 Unlocks Tomorrow at 00:00 (Daily Story Energy)'
                                                      : canPlayResult.reason === 'premium_only' ? '⭐ Premium Story' 
                                                      : level.day_number !== undefined ? `🔒 Unlocks on Day ${level.day_number}` 
                                                      : '🔒 Locked'}
@@ -689,18 +726,22 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                                         <div className={clsx(
                                             "absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap z-30 transition-all duration-300 transform flex flex-col items-center",
                                             "md:-bottom-14", // Lower overlap on desktop
-                                            isUnlocked ? "scale-100 hover:scale-110" : "scale-90 opacity-70 grayscale"
+                                            isUnlocked ? "scale-100 hover:scale-110" : (isEnergyLocked ? "scale-100 hover:scale-105" : "scale-90 opacity-70 grayscale")
                                         )}>
                                             {/* Personality Badge */}
                                             {level.personality && (
                                                 <div className={clsx(
                                                     "relative -mb-2 px-3 py-0.5 rounded-full border shadow-sm flex items-center justify-center z-40 animate-float min-w-max",
                                                     "md:-mb-3 md:px-4 md:py-1 md:border-2",
-                                                    isCandyMode
-                                                        ? (isUnlocked ? "bg-gradient-to-r from-yellow-300 to-yellow-500 border-white text-yellow-900" : "bg-slate-700 border-slate-600 text-slate-400")
-                                                        : (isUnlocked 
-                                                            ? (isCurrent ? "bg-amber-500 border-amber-300 text-amber-950 shadow-[0_0_10px_rgba(245,158,11,0.5)]" : "bg-[rgba(10,15,40,0.95)] border-[#4DD9FF]/70 text-[#E8E0FF] shadow-[0_0_8px_rgba(77,217,255,0.3)]")
-                                                            : "bg-slate-800 border-slate-700 text-slate-500")
+                                                    isEnergyLocked
+                                                        ? (isCandyMode 
+                                                            ? "bg-amber-100 border-amber-400 text-amber-900 shadow-sm"
+                                                            : "bg-slate-900/95 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.4)]")
+                                                        : isCandyMode
+                                                            ? (isUnlocked ? "bg-gradient-to-r from-yellow-300 to-yellow-500 border-white text-yellow-900" : "bg-slate-700 border-slate-600 text-slate-400")
+                                                            : (isUnlocked 
+                                                                ? (isCurrent ? "bg-amber-500 border-amber-300 text-amber-950 shadow-[0_0_10px_rgba(245,158,11,0.5)]" : "bg-[rgba(10,15,40,0.95)] border-[#4DD9FF]/70 text-[#E8E0FF] shadow-[0_0_8px_rgba(77,217,255,0.3)]")
+                                                                : "bg-slate-800 border-slate-700 text-slate-500")
                                                 )}>
                                                     <span className="text-[10px] md:text-sm font-black uppercase tracking-blacker drop-shadow-sm personality-name-label">
                                                         {level.personality}
@@ -711,21 +752,27 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                                             {/* Story Title */}
                                             <div className={clsx(
                                                 "px-4 py-1 pt-3 pb-1 md:px-6 md:py-2 md:pt-4 md:pb-2 rounded-xl shadow-xl flex items-center justify-center min-w-[100px] md:min-w-[140px] transition-all duration-300",
-                                                isCandyMode
-                                                    ? (isUnlocked ? "bg-gradient-to-r from-pink-500 to-rose-500 border-b-[3px] md:border-b-4 border-rose-800" : "border-b-[3px] md:border-b-4 bg-slate-800 border-slate-900")
-                                                    : (isUnlocked
-                                                        ? (isCurrent 
-                                                            ? "bg-gradient-to-r from-amber-500 to-amber-600 border-b-[3px] md:border-b-4 border-amber-800 shadow-[0_0_20px_rgba(245,158,11,0.4)]"
-                                                            : "bg-[rgba(10,15,40,0.95)] border border-[#4DD9FF]/60 shadow-[0_0_15px_rgba(77,217,255,0.15)]")
-                                                        : "bg-slate-800/80 border-b-[3px] md:border-b-4 border-slate-900")
+                                                isEnergyLocked
+                                                    ? (isCandyMode 
+                                                        ? "bg-amber-50 border border-amber-300"
+                                                        : "bg-slate-900/90 border border-amber-500/40")
+                                                    : isCandyMode
+                                                        ? (isUnlocked ? "bg-gradient-to-r from-pink-500 to-rose-500 border-b-[3px] md:border-b-4 border-rose-800" : "border-b-[3px] md:border-b-4 bg-slate-800 border-slate-900")
+                                                        : (isUnlocked
+                                                            ? (isCurrent 
+                                                                ? "bg-gradient-to-r from-amber-500 to-amber-600 border-b-[3px] md:border-b-4 border-amber-800 shadow-[0_0_20px_rgba(245,158,11,0.4)]"
+                                                                : "bg-[rgba(10,15,40,0.95)] border border-[#4DD9FF]/60 shadow-[0_0_15px_rgba(77,217,255,0.15)]")
+                                                            : "bg-slate-800/80 border-b-[3px] md:border-b-4 border-slate-900")
                                             )}>
                                                 <span className={clsx(
                                                     "text-[10px] md:text-xs font-bold uppercase tracking-wider leading-none text-center story-title-label",
-                                                    isCandyMode
-                                                        ? (isUnlocked ? "text-white drop-shadow-md" : "text-slate-500")
-                                                        : (isUnlocked 
-                                                            ? (isCurrent ? "text-white drop-shadow-md" : "text-[#F0EEFF] drop-shadow-[0_0_4px_rgba(240,238,255,0.3)]")
-                                                            : "text-slate-500")
+                                                    isEnergyLocked
+                                                        ? (isCandyMode ? "text-amber-900 font-bold" : "text-slate-200 font-bold")
+                                                        : isCandyMode
+                                                            ? (isUnlocked ? "text-white drop-shadow-md" : "text-slate-500")
+                                                            : (isUnlocked 
+                                                                ? (isCurrent ? "text-white drop-shadow-md" : "text-[#F0EEFF] drop-shadow-[0_0_4px_rgba(240,238,255,0.3)]")
+                                                                : "text-slate-500")
                                                 )}>
                                                     {level.title}
                                                 </span>

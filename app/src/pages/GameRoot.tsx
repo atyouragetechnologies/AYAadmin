@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { StreakCelebration } from '../components/game/StreakCelebration';
 import { SubscriptionModal } from '../components/payment/SubscriptionModal';
+import { EnergyModal } from '../components/game/EnergyModal';
 import { auth } from '../lib/firebase';
 import { getUserProfile, getPersonalityProfile } from '../lib/firestore';
 import { getSession, clearSession, markQuizDone, isQuizDone } from '../utils/session';
@@ -22,6 +23,10 @@ export function GameRoot() {
     const setPendingStreakData = useUserStore((state) => state.setPendingStreakData);
     const showSubscriptionModal = useUserStore((state) => state.showSubscriptionModal);
     const setShowSubscriptionModal = useUserStore((state) => state.setShowSubscriptionModal);
+    const showEnergyModal = useUserStore((state) => state.showEnergyModal);
+    const setShowEnergyModal = useUserStore((state) => state.setShowEnergyModal);
+    const energyPreviewLevel = useUserStore((state) => state.energyPreviewLevel);
+    const setEnergyPreviewLevel = useUserStore((state) => state.setEnergyPreviewLevel);
     const location = useLocation();
     const safetySyncStarted = useRef(false);
 
@@ -485,6 +490,19 @@ export function GameRoot() {
             <SubscriptionModal
                 isOpen={showSubscriptionModal}
                 onClose={() => setShowSubscriptionModal(false)}
+            />
+            <EnergyModal
+                isOpen={showEnergyModal}
+                onClose={() => {
+                    setShowEnergyModal(false);
+                    setEnergyPreviewLevel(null);
+                }}
+                onUpgrade={() => {
+                    setShowEnergyModal(false);
+                    setEnergyPreviewLevel(null);
+                    setShowSubscriptionModal(true);
+                }}
+                previewLevel={energyPreviewLevel}
             />
             <Outlet />
             <NotificationPrompt

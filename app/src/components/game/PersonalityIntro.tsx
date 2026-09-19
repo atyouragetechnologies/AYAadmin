@@ -1,10 +1,11 @@
 import type { Level } from '../../types/gameTypes';
-import { Play, Trophy, Sparkles, Star } from 'lucide-react';
+import { Play, Trophy, Sparkles, Star, Zap, Lock } from 'lucide-react';
 import { audioManager as audioSynth } from "../../utils/audioManager";
 import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import { useUserStore } from '../../store/userStore';
 import { bgmManager } from '../../utils/bgmManager';
+import { getRemainingFreeStories, isAyaPlusUser } from '../../services/accessControl';
 
 interface PersonalityIntroProps {
     level: Level;
@@ -15,7 +16,10 @@ interface PersonalityIntroProps {
 export function PersonalityIntro({ level, onStart, onBack }: PersonalityIntroProps) {
     const [isVisible, setIsVisible] = useState(false);
     const [imgLoaded, setImgLoaded] = useState(false);
+    const profile = useUserStore((state) => state.profile);
     const isCandyMode = useUserStore((state) => state.isCandyMode);
+    const remainingEnergy = getRemainingFreeStories(profile);
+    const isAyaPlus = isAyaPlusUser(profile);
 
     useEffect(() => {
         setIsVisible(true);
@@ -95,7 +99,7 @@ export function PersonalityIntro({ level, onStart, onBack }: PersonalityIntroPro
                 )}>
 
                     {/* Header Pills */}
-                    <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
                         <div className={clsx(
                             "px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm flex items-center gap-1 animate-bounce-slow",
                             isCandyMode ? "bg-yellow-400 text-yellow-900" : "bg-amber-500/20 border border-amber-500/50 text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]"
@@ -108,6 +112,24 @@ export function PersonalityIntro({ level, onStart, onBack }: PersonalityIntroPro
                         )}>
                             {level.archetype}
                         </div>
+                        {!isAyaPlus && (
+                            <div 
+                                onClick={() => {
+                                    audioSynth.playClick();
+                                    useUserStore.getState().setEnergyPreviewLevel(level);
+                                    useUserStore.getState().setShowEnergyModal(true);
+                                }}
+                                className={clsx(
+                                    "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 cursor-pointer transition-transform hover:scale-105 active:scale-95",
+                                    remainingEnergy > 0 
+                                        ? (isCandyMode ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-amber-500/20 text-amber-300 border border-amber-500/40")
+                                        : (isCandyMode ? "bg-slate-200 text-slate-700 border border-slate-300" : "bg-slate-800 text-slate-400 border border-slate-700")
+                                )}
+                            >
+                                <Zap size={12} className={remainingEnergy > 0 ? "fill-amber-400 text-amber-400" : "text-slate-400"} />
+                                <span>{remainingEnergy > 0 ? `${remainingEnergy} of 3 Stories Left` : '3 of 3 Stories Completed'}</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Title & Fame */}
@@ -188,6 +210,35 @@ export function PersonalityIntro({ level, onStart, onBack }: PersonalityIntroPro
                                 "{level.lesson || "Discover your path."}"
                             </p>
                         </div>
+
+                        {/* 3 Stories a Day Habit Notice (Free users) */}
+                        {!isAyaPlus && (
+                            <div 
+                                onClick={() => {
+                                    audioSynth.playClick();
+                                    useUserStore.getState().setEnergyPreviewLevel(level);
+                                    useUserStore.getState().setShowEnergyModal(true);
+                                }}
+                                className={clsx(
+                                    "p-3.5 rounded-2xl border text-xs flex items-center justify-between cursor-pointer transition-colors shadow-sm",
+                                    isCandyMode
+                                        ? "bg-amber-50/80 border-amber-200 text-amber-950 hover:bg-amber-100/80"
+                                        : "bg-slate-900/60 border-amber-500/30 text-amber-200/90 hover:bg-slate-900/90"
+                                )}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Zap size={14} className="text-amber-400 shrink-0" />
+                                    <span>
+                                        {remainingEnergy > 0 
+                                            ? "You get 3 stories a day · Come back tomorrow for new stories!" 
+                                            : "Daily limit reached · Come back tomorrow for new stories!"}
+                                    </span>
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-wider underline text-amber-400 shrink-0 ml-2">
+                                    Why 3?
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer Actions */}
@@ -195,18 +246,37 @@ export function PersonalityIntro({ level, onStart, onBack }: PersonalityIntroPro
                         "pt-4 md:pt-6 mt-auto flex gap-4 sticky bottom-0 pb-safe",
                         isCandyMode ? "bg-slate-50/90 backdrop-blur-sm" : "bg-[#0a0f28]/95 backdrop-blur-md border-t border-[#4DD9FF]/10 pt-4"
                     )}>
-                        <button
-                            onClick={handleStart}
-                            className={clsx(
-                                "flex-1 text-white font-black py-3 md:py-4 rounded-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-3 border-b-4 text-base md:text-lg uppercase tracking-wide group",
-                                isCandyMode
-                                    ? "bg-gradient-to-r from-pink-500 to-rose-600 shadow-[0_8px_20px_rgba(236,72,153,0.3)] border-rose-800"
-                                    : "bg-gradient-to-r from-amber-500 to-amber-600 shadow-[0_0_20px_rgba(245,158,11,0.4)] border-amber-800 text-shadow-sm"
-                            )}
-                        >
-                            <Play size={20} className="md:w-6 md:h-6 fill-white group-hover:animate-pulse" />
-                            Start Journey
-                        </button>
+                        {!isAyaPlus && remainingEnergy <= 0 ? (
+                            <button
+                                onClick={() => {
+                                    audioSynth.playClick();
+                                    useUserStore.getState().setEnergyPreviewLevel(level);
+                                    useUserStore.getState().setShowEnergyModal(true);
+                                }}
+                                className={clsx(
+                                    "flex-1 text-white font-black py-3 md:py-4 rounded-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-3 border-b-4 text-base md:text-lg uppercase tracking-wide group",
+                                    isCandyMode
+                                        ? "bg-gradient-to-r from-amber-600 to-yellow-600 border-amber-800 shadow-[0_4px_15px_rgba(217,119,6,0.3)]"
+                                        : "bg-gradient-to-r from-amber-600 to-yellow-600 border-amber-800 shadow-[0_0_20px_rgba(245,158,11,0.4)] text-shadow-sm"
+                                )}
+                            >
+                                <Lock size={18} className="text-white" />
+                                Energy Recharging · Unlocks Tomorrow
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleStart}
+                                className={clsx(
+                                    "flex-1 text-white font-black py-3 md:py-4 rounded-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-3 border-b-4 text-base md:text-lg uppercase tracking-wide group",
+                                    isCandyMode
+                                        ? "bg-gradient-to-r from-pink-500 to-rose-600 shadow-[0_8px_20px_rgba(236,72,153,0.3)] border-rose-800"
+                                        : "bg-gradient-to-r from-amber-500 to-amber-600 shadow-[0_0_20px_rgba(245,158,11,0.4)] border-amber-800 text-shadow-sm"
+                                )}
+                            >
+                                <Play size={20} className="md:w-6 md:h-6 fill-white group-hover:animate-pulse" />
+                                Start Journey
+                            </button>
+                        )}
                         <button
                             onClick={() => {
                                 audioSynth.playClick();
