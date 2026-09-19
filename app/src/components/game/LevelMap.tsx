@@ -1,5 +1,5 @@
 import { useUserStore } from '../../store/userStore';
-import { Star, Lock, Zap } from 'lucide-react';
+import { Star, Lock } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -14,7 +14,7 @@ import { SideMenu } from './SideMenu';
 import { bgmManager } from '../../utils/bgmManager';
 import { MapAmbience } from './MapAmbience';
 import { getUnlockedDayCount } from '../../utils/storyUnlock';
-import { canPlayStory, getRemainingFreeStories, isAyaPlusUser, FREE_DAILY_STORY_LIMIT } from '../../services/accessControl';
+import { canPlayStory } from '../../services/accessControl';
 import { SearchBar } from '../SearchBar';
 import { resolvePersonalityAvatar } from '../../utils/avatarUtils';
 import TopicPreferencesSurvey from '../feedback/TopicPreferencesSurvey';
@@ -43,8 +43,6 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
     const levels = useUserStore((state) => state.levels);
     const levelScores = useUserStore((state) => state.levelScores);
     const profile = useUserStore((state) => state.profile);
-    const isFreePlan = !isAyaPlusUser(profile);
-    const remainingEnergy = getRemainingFreeStories(profile);
     // Auto-popup disabled as requested: only opens if user clicks the button
     const [showCheckInModal, setShowCheckInModal] = useState(false);
 

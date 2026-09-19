@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aya-live-v1';
+const CACHE_NAME = 'aya-live-v2';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
