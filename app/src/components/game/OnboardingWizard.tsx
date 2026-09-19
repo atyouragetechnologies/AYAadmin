@@ -359,14 +359,18 @@ export function OnboardingWizard() {
                 }
 
                 // Check username availability in Firestore
-                const usersRef = collection(db, 'users');
-                const q = query(usersRef, where('username', '==', cleanUsername), limit(1));
-                const snap = await getDocs(q);
-                if (!snap.empty) {
-                    setIsLoading(false);
-                    isSubmitting.current = false;
-                    setError('This username is not available');
-                    return;
+                try {
+                    const usersRef = collection(db, 'users');
+                    const q = query(usersRef, where('username', '==', cleanUsername), limit(1));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        setIsLoading(false);
+                        isSubmitting.current = false;
+                        setError('This username is not available');
+                        return;
+                    }
+                } catch (err) {
+                    console.warn('[Onboarding] Username check skipped due to permissions:', err);
                 }
             } else {
                 if (!cleanMobile) {

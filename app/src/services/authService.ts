@@ -20,7 +20,6 @@ import {
     userDoc,
     upsertUserProfile,
     claimUsername,
-    isUsernameAvailable,
     adminUserDoc,
     db,
 } from '../lib/firestore';
@@ -149,10 +148,15 @@ async function handlePostSignIn(firebaseUser: FirebaseUser, extraData: Record<st
     }
 
     // Admin check
-    const adminSnap = data.email
-        ? await getDoc(adminUserDoc(data.email as string))
-        : null;
-    const isAdmin = Boolean(data.isAdmin) || (adminSnap?.exists() ?? false);
+    let isAdmin = Boolean(data.isAdmin);
+    if (data.email) {
+        try {
+            const adminSnap = await getDoc(adminUserDoc(data.email as string));
+            if (adminSnap?.exists()) isAdmin = true;
+        } catch {
+            // Ignore permission errors on admin_users collection for non-admin users
+        }
+    }
 
     const profile = firestoreDocToProfile(uid, { ...data, isAdmin });
 
@@ -220,13 +224,6 @@ export const authService = {
         if (!password || password.length < 6) throw new Error('Password must be at least 6 characters.');
         if (confirmPassword && password !== confirmPassword) throw new Error('Passwords do not match.');
 
-        // Check if phone already registered in Firestore
-        const q = query(collection(db, 'users'), where('mobile', '==', cleanPhone), limit(1));
-        const existingSnap = await getDocs(q);
-        if (!existingSnap.empty) {
-            throw new Error('An account with this phone number already exists. Please sign in instead.');
-        }
-
         const email = derivePhoneEmail(cleanPhone);
         const defaultName = `User_${cleanPhone.slice(-4)}`;
 
@@ -236,9 +233,15 @@ export const authService = {
             fbUser = cred.user;
         } catch (err: any) {
             if (err.code === 'auth/email-already-in-use') {
-                // Account exists — try signing in
-                const cred = await signInWithEmailAndPassword(auth, email, password);
-                fbUser = cred.user;
+                // Account already exists with this phone number
+                try {
+                    const cred = await signInWithEmailAndPassword(auth, email, password);
+                    fbUser = cred.user;
+                } catch {
+                    throw new Error('An account with this phone number already exists. Please sign in instead.');
+                }
+            } else if (err.code === 'auth/weak-password') {
+                throw new Error('Password should be at least 6 characters.');
             } else {
                 throw new Error(err.message || 'Could not create account. Please try again.');
             }
@@ -285,15 +288,6 @@ export const authService = {
         if (!password || password.length < 6) throw new Error('Password must be at least 6 characters.');
         if (confirmPassword && password !== confirmPassword) throw new Error('Passwords do not match.');
 
-        const available = await isUsernameAvailable(cleanUsername);
-        if (!available) throw new Error('Username is already taken. Please choose another.');
-
-        if (cleanMobile) {
-            const q = query(collection(db, 'users'), where('mobile', '==', cleanMobile), limit(1));
-            const snap = await getDocs(q);
-            if (!snap.empty) throw new Error('This phone number is already associated with another AYA account.');
-        }
-
         const email = deriveUsernameEmail(cleanUsername);
 
         let fbUser: FirebaseUser;
@@ -302,8 +296,14 @@ export const authService = {
             fbUser = cred.user;
         } catch (err: any) {
             if (err.code === 'auth/email-already-in-use') {
-                const cred = await signInWithEmailAndPassword(auth, email, password);
-                fbUser = cred.user;
+                try {
+                    const cred = await signInWithEmailAndPassword(auth, email, password);
+                    fbUser = cred.user;
+                } catch {
+                    throw new Error('This username is already taken. Please choose another.');
+                }
+            } else if (err.code === 'auth/weak-password') {
+                throw new Error('Password should be at least 6 characters.');
             } else {
                 throw new Error(err.message || 'Could not create account.');
             }
@@ -336,19 +336,23 @@ export const authService = {
         } catch (err: any) {
             if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
                 // Try to find by username in Firestore — user may have a different email
-                const q = query(
-                    collection(db, 'users'),
-                    where('usernameLower', '==', cleanUsername.toLowerCase()),
-                    limit(1)
-                );
-                const snap = await getDocs(q);
-                if (snap.empty) throw new Error('Account not found for this username.');
-
-                const doc = snap.docs[0];
-                const storedEmail = doc.data().email as string | undefined;
-                if (storedEmail && storedEmail !== email) {
-                    const cred = await signInWithEmailAndPassword(auth, storedEmail, password);
-                    return handlePostSignIn(cred.user);
+                try {
+                    const q = query(
+                        collection(db, 'users'),
+                        where('usernameLower', '==', cleanUsername.toLowerCase()),
+                        limit(1)
+                    );
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        const doc = snap.docs[0];
+                        const storedEmail = doc.data().email as string | undefined;
+                        if (storedEmail && storedEmail !== email) {
+                            const cred = await signInWithEmailAndPassword(auth, storedEmail, password);
+                            return handlePostSignIn(cred.user);
+                        }
+                    }
+                } catch {
+                    // Ignore unauthenticated query failure
                 }
                 throw new Error('Invalid username or password.');
             }
