@@ -7,6 +7,7 @@ import { AgeSelector } from '../components/auth/AgeSelector';
 import { auth } from '../lib/firebase';
 import { authService } from '../services/authService';
 import { audioManager as audioSynth } from '../utils/audioManager';
+import { useUserStore } from '../store/userStore';
 
 import { normalizePhone } from '../utils/authHelpers';
 
@@ -57,9 +58,32 @@ export function SignupPage() {
             await authService.signInWithGoogle(`${window.location.origin}/signup/complete`);
         } catch (err: any) {
             console.error('Google Sign-Up Error:', err);
-            setError(err.message || 'Failed to initialize Google Sign-Up.');
+            setError(`Failed to initialize Google Sign-Up: ${err.message}`);
             setIsLoading(false);
         }
+    };
+
+    const handleGuestSignIn = () => {
+        audioSynth.playClick();
+        setIsLoading(true);
+        setTimeout(() => {
+            useUserStore.getState().setProfile({
+                id: 'offline-test-' + Date.now(),
+                auth_user_id: 'offline-test',
+                name: 'Guest Player',
+                age: 18,
+                mobile: '0000000000',
+                onboarding_complete: true,
+                assessmentCompleted: true,
+                tutorial_completed: true,
+                preferred_theme: 'city_dark',
+                access_type: 'free',
+                daily_free_stories: 0,
+                total_xp: 0,
+                isAdmin: true
+            } as any);
+            navigate('/game');
+        }, 500);
     };
 
     const handleFormSubmit = async (e: React.FormEvent) => {
@@ -198,6 +222,19 @@ export function SignupPage() {
                                             <span>CONTINUE WITH GOOGLE</span>
                                         </>
                                     )}
+                                </motion.button>
+
+                                <motion.button
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.35 }}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    disabled={isLoading}
+                                    onClick={handleGuestSignIn}
+                                    className="w-full mt-3 py-4 bg-[#1a1a2e] text-white font-black text-base rounded-2xl shadow-lg flex items-center justify-center space-x-3 transition-all hover:bg-[#2a2a4a] border border-[#00f1fe]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <span>PLAY AS GUEST (TEST)</span>
                                 </motion.button>
 
                                 <div className="flex items-center gap-4 my-2 opacity-40 w-full">

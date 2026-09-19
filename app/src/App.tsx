@@ -78,9 +78,9 @@ function App() {
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
-            <Route path="/signup" element={<Navigate to="/game" replace />} />
-            <Route path="/signin" element={<Navigate to="/game" replace />} />
-            <Route path="/signup/complete" element={<Navigate to="/game" replace />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/signin" element={<SigninPage />} />
+            <Route path="/signup/complete" element={<SignupCompletePage />} />
             <Route path="/payment/verify" element={<PaymentVerify />} />
             <Route path="/dashboard" element={<Navigate to="/game" replace />} />
             <Route path="/game" element={<GameRoot />}>
