@@ -1,5 +1,5 @@
 import { useUserStore } from '../../store/userStore';
-import { Star, Lock } from 'lucide-react';
+import { Star, Lock, Zap } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -14,7 +14,7 @@ import { SideMenu } from './SideMenu';
 import { bgmManager } from '../../utils/bgmManager';
 import { MapAmbience } from './MapAmbience';
 import { getUnlockedDayCount } from '../../utils/storyUnlock';
-import { canPlayStory } from '../../services/accessControl';
+import { canPlayStory, getRemainingFreeStories, isAyaPlusUser, FREE_DAILY_STORY_LIMIT } from '../../services/accessControl';
 import { SearchBar } from '../SearchBar';
 import { resolvePersonalityAvatar } from '../../utils/avatarUtils';
 import TopicPreferencesSurvey from '../feedback/TopicPreferencesSurvey';
@@ -43,6 +43,8 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
     const levels = useUserStore((state) => state.levels);
     const levelScores = useUserStore((state) => state.levelScores);
     const profile = useUserStore((state) => state.profile);
+    const isFreePlan = !isAyaPlusUser(profile);
+    const remainingEnergy = getRemainingFreeStories(profile);
     // Auto-popup disabled as requested: only opens if user clicks the button
     const [showCheckInModal, setShowCheckInModal] = useState(false);
 
@@ -371,7 +373,43 @@ export function LevelMap({ onPlayLevel, onOpenDnaProfile }: LevelMapProps) {
                 onOpenDnaProfile={onOpenDnaProfile}
             />
 
-
+            {/* Energy Bar (Free Plan Only) */}
+            {isFreePlan && (
+                <div 
+                    onClick={() => {
+                        audioSynth.playClick();
+                        useUserStore.getState().setShowSubscriptionModal(true);
+                    }}
+                    className={clsx(
+                    "absolute top-4 left-4 md:top-6 md:left-6 z-[110] flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-lg backdrop-blur-md pointer-events-auto transition-transform hover:scale-105 cursor-pointer",
+                    isCandyMode
+                        ? (remainingEnergy > 0 ? "bg-white/90 border-amber-300" : "bg-slate-200 border-slate-300")
+                        : (remainingEnergy > 0 ? "bg-slate-900/90 border-[#00f2ff]/30" : "bg-slate-900/90 border-red-500/40")
+                )}>
+                    <Zap className={clsx(
+                        "w-5 h-5 drop-shadow-sm",
+                        remainingEnergy > 0 ? "text-yellow-400 fill-yellow-400" : "text-slate-400 fill-slate-400"
+                    )} />
+                    <div className="flex flex-col">
+                        <span className={clsx("text-[9px] font-black uppercase tracking-wider mb-0.5", isCandyMode ? "text-slate-600" : "text-slate-400")}>
+                            Energy
+                        </span>
+                        <div className="flex gap-1">
+                            {Array.from({ length: FREE_DAILY_STORY_LIMIT }).map((_, i) => (
+                                <div 
+                                    key={i} 
+                                    className={clsx(
+                                        "w-2.5 h-2.5 rounded-full transition-all duration-300",
+                                        i < remainingEnergy 
+                                            ? (isCandyMode ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]" : "bg-[#00f2ff] shadow-[0_0_8px_#00f2ff]") 
+                                            : (isCandyMode ? "bg-slate-300 shadow-inner" : "bg-slate-700 shadow-inner")
+                                    )}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Header Search Portal */}
             {document.getElementById('header-search-portal') && createPortal(

@@ -5,8 +5,7 @@ import { useSubscription } from '../../hooks/useSubscription';
 import { audioManager as audioSynth } from '../../utils/audioManager';
 import { isPwaInstalled, canPromptNativeInstall, triggerNativeInstall } from '../../utils/pwaInstall';
 import { isNativeApp } from '../../hooks/useNativeFeatures';
-import { Sparkles, Crown, Download, Zap } from 'lucide-react';
-import { getRemainingFreeStories, FREE_DAILY_STORY_LIMIT } from '../../services/accessControl';
+import { Sparkles, Crown, Download } from 'lucide-react';
 import clsx from 'clsx';
 import './PwaHeader.css';
 
@@ -18,9 +17,6 @@ export const PwaHeader: FC = () => {
     const [isInstalled, setIsInstalled] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
-
-    const isFreePlan = !isPaid && !isTrialActive;
-    const remainingEnergy = getRemainingFreeStories(profile);
 
     useEffect(() => {
         setIsInstalled(isPwaInstalled());
@@ -145,44 +141,6 @@ export const PwaHeader: FC = () => {
 
             {/* Profile, Plan Status & XP Section */}
             <div data-tutorial="header-profile" className="flex items-center justify-end gap-1.5 sm:gap-2.5 shrink-0">
-                {/* Energy Bar for Free Users */}
-                {isFreePlan && (
-                    <button
-                        onClick={() => {
-                            audioSynth.playClick();
-                            setShowSubscriptionModal(true);
-                        }}
-                        type="button"
-                        className={clsx(
-                            "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full border cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 select-none outline-none",
-                            isCandyMode
-                                ? "bg-amber-100 border-amber-300 text-amber-900 shadow-sm"
-                                : remainingEnergy > 0 
-                                    ? "bg-gradient-to-r from-cyan-500/10 via-[#00f2ff]/10 to-cyan-500/15 border-[#00f2ff]/30 hover:border-[#00f2ff]/60 shadow-[0_0_12px_rgba(0,242,255,0.15)]"
-                                    : "bg-red-500/10 border-red-500/40 hover:border-red-400 shadow-[0_0_12px_rgba(239,68,68,0.15)]"
-                        )}
-                        title={`Energy: ${remainingEnergy}/${FREE_DAILY_STORY_LIMIT} Daily Free Stories`}
-                    >
-                        <Zap size={11} className={clsx(
-                            "shrink-0",
-                            remainingEnergy > 0 ? "text-[#00f2ff] fill-[#00f2ff]" : "text-red-400 fill-red-400"
-                        )} />
-                        <div className="flex gap-0.5 sm:gap-1">
-                            {Array.from({ length: FREE_DAILY_STORY_LIMIT }).map((_, i) => (
-                                <div 
-                                    key={i} 
-                                    className={clsx(
-                                        "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all duration-300",
-                                        i < remainingEnergy 
-                                            ? (isCandyMode ? "bg-amber-400 shadow-[0_0_4px_rgba(251,191,36,0.5)]" : "bg-[#00f2ff] shadow-[0_0_4px_#00f2ff]") 
-                                            : (isCandyMode ? "bg-slate-300 shadow-inner" : "bg-slate-700 shadow-inner")
-                                    )}
-                                />
-                            ))}
-                        </div>
-                    </button>
-                )}
-
                 {/* Subscription / Plan Status Badge */}
                 {isPaid ? (
                     <button
