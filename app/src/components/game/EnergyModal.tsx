@@ -1,6 +1,6 @@
 import { useUserStore } from '../../store/userStore';
-import { Zap, Sparkles, X, Clock, Compass, Crown } from 'lucide-react';
-import { getRemainingFreeStories, isAyaPlusUser, FREE_DAILY_STORY_LIMIT } from '../../services/accessControl';
+import { Zap, Sparkles, X, Crown } from 'lucide-react';
+import { getRemainingFreeStories, isAyaPlusUser } from '../../services/accessControl';
 import { audioManager as audioSynth } from '../../utils/audioManager';
 import { resolvePersonalityAvatar } from '../../utils/avatarUtils';
 import type { Level } from '../../types/gameTypes';
@@ -151,7 +151,11 @@ export function EnergyModal({ isOpen, onClose, onUpgrade, previewLevel }: Energy
                     <button
                         onClick={() => {
                             audioSynth.playClick();
-                            onClose();
+                            if (isDepleted) {
+                                onUpgrade();
+                            } else {
+                                onClose();
+                            }
                         }}
                         className={clsx(
                             "w-full py-3.5 rounded-2xl font-black uppercase tracking-wider text-sm transition-transform active:scale-95 hover:scale-[1.02] shadow-lg flex items-center justify-center gap-2",
