@@ -13,7 +13,7 @@ export const PwaHeader: FC = () => {
     const profile = useUserStore((state) => state.profile);
     const isCandyMode = useUserStore((state) => state.isCandyMode);
     const setShowSubscriptionModal = useUserStore((state) => state.setShowSubscriptionModal);
-    const { isPaid, isTrialActive, hasTrialAvailable, trialUsed, daysRemaining } = useSubscription();
+    const { isPaid } = useSubscription();
     const [isInstalled, setIsInstalled] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
@@ -154,53 +154,6 @@ export const PwaHeader: FC = () => {
                     >
                         <Crown size={11} className="text-amber-400 shrink-0" />
                         <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-purple-200">PRO Plan</span>
-                    </button>
-                ) : isTrialActive ? (
-                    <button
-                        onClick={() => {
-                            audioSynth.playClick();
-                            setShowSubscriptionModal(true);
-                        }}
-                        type="button"
-                        className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full border cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 select-none outline-none bg-gradient-to-r from-emerald-500/20 via-teal-500/15 to-emerald-500/25 border-emerald-500/40 hover:border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
-                        title={`Trial Plan Active (${daysRemaining} days left) • Tap to view details`}
-                    >
-                        <Sparkles size={11} className="text-emerald-400 shrink-0 animate-pulse" />
-                        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-300">
-                            <span className="hidden sm:inline">Trial Plan</span>
-                            <span className="sm:hidden">Trial</span>
-                        </span>
-                        {daysRemaining > 0 && (
-                            <span className="text-[9px] sm:text-[10px] text-emerald-400/80 font-mono font-bold">({daysRemaining}d)</span>
-                        )}
-                    </button>
-                ) : hasTrialAvailable ? (
-                    <button
-                        onClick={() => {
-                            audioSynth.playClick();
-                            setShowSubscriptionModal(true);
-                        }}
-                        type="button"
-                        className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full border cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 select-none outline-none bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-pink-500/20 border-cyan-400/40 hover:border-cyan-300 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)] animate-pulse"
-                        title="Start 7-Day Free Trial"
-                    >
-                        <Sparkles size={11} className="text-cyan-400 shrink-0" />
-                        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-cyan-200">
-                            <span className="hidden sm:inline">Start </span>Trial
-                        </span>
-                    </button>
-                ) : trialUsed ? (
-                    <button
-                        onClick={() => {
-                            audioSynth.playClick();
-                            setShowSubscriptionModal(true);
-                        }}
-                        type="button"
-                        className="hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full border cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 select-none outline-none bg-slate-800/80 hover:bg-slate-700/80 border-slate-700 hover:border-purple-400 text-slate-300"
-                        title="Free Trial Concluded • Upgrade to PRO"
-                    >
-                        <Crown size={11} className="text-amber-400 shrink-0" />
-                        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-300">Get PRO</span>
                     </button>
                 ) : null}
 

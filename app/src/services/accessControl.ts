@@ -12,8 +12,9 @@
 import { PRICING_CONFIG } from '../config/recommendationConfig';
 import type { UserProfile } from '../types/gameTypes';
 
-// Free-tier users may play this many stories per calendar day (UTC-based date key).
-export const FREE_DAILY_STORY_LIMIT = 3;
+// Free-tier users may play a maximum of 3 stories in their entire lifetime.
+export const FREE_LIFETIME_STORY_LIMIT = 3;
+export const FREE_DAILY_STORY_LIMIT = 3; // Kept for backwards compatibility with imports, but used as lifetime limit.
 
 export function isAyaPlusUser(profile?: UserProfile | null): boolean {
     if (!profile) return false;
@@ -22,14 +23,12 @@ export function isAyaPlusUser(profile?: UserProfile | null): boolean {
 }
 
 export function getRemainingFreeStories(profile?: UserProfile | null): number {
-    if (!profile) return FREE_DAILY_STORY_LIMIT;
+    if (!profile) return FREE_LIFETIME_STORY_LIMIT;
     if (isAyaPlusUser(profile)) return 999;
 
-    const today = new Date().toISOString().split('T')[0];
-    if (profile.last_story_date === today) {
-        return Math.max(0, FREE_DAILY_STORY_LIMIT - (profile.daily_free_stories || 0));
-    }
-    return FREE_DAILY_STORY_LIMIT;
+    // AYA uses a strict lifetime limit for free users. No daily refills.
+    const completed = profile.stories_completed || 0;
+    return Math.max(0, FREE_LIFETIME_STORY_LIMIT - completed);
 }
 
 export function canPlayStory(profile: UserProfile | null, isStoryPremium: boolean = false): { allowed: boolean, reason?: 'limit_reached' | 'premium_only' } {
