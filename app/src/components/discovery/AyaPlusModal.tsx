@@ -4,7 +4,7 @@ import { Crown, Sparkles, Check, X, ShieldCheck } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import { upsertUserProfile, logAnalyticsEvent } from '../../lib/firestore';
 import { audioManager } from '../../utils/audioManager';
-import { useSubscription } from '../../hooks/useSubscription';
+
 
 interface AyaPlusModalProps {
     isOpen: boolean;
@@ -13,7 +13,7 @@ interface AyaPlusModalProps {
 
 export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
     const profile = useUserStore((state) => state.profile);
-    const { isTrialActive, formattedEndDate, daysRemaining } = useSubscription();
+    // We don't need trial-related state anymore
     const [isUpgrading, setIsUpgrading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
@@ -98,24 +98,6 @@ export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
                         </div>
                     </div>
 
-                    {/* Free Trial Banner */}
-                    <div className="mb-4 p-3 rounded-2xl border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-between gap-2 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
-                        <div className="flex items-center gap-2.5">
-                            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <p className="text-xs text-emerald-200">
-                                {isTrialActive ? (
-                                    <>7-Day Free Trial active · ends on <strong className="text-white underline decoration-emerald-400/50">{formattedEndDate}</strong></>
-                                ) : (
-                                    <>Free trial ended on <strong className="text-white">{formattedEndDate}</strong></>
-                                )}
-                            </p>
-                        </div>
-                        {isTrialActive && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
-                                {daysRemaining > 0 ? `${daysRemaining}d left` : 'Ends today'}
-                            </span>
-                        )}
-                    </div>
 
                     <p className="text-xs text-slate-300 mb-5 leading-relaxed">
                         Step beyond the daily limit. Transform daily dilemmas into deep, lasting mental models.

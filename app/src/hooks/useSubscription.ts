@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getUserProfile, upsertUserProfile } from '../lib/firestore';
+import { getUserProfile } from '../lib/firestore';
 import { auth } from '../lib/firebase';
 import { useUserStore } from '../store/userStore';
 
@@ -62,9 +62,9 @@ export const useSubscription = () => {
         } else {
             setIsTrialActive(false);
             setTrialUsed(false);
-            setHasTrialAvailable(true);
+            setHasTrialAvailable(false); // Trial removed completely
             setIsPremium(false);
-            setDaysRemaining(7);
+            setDaysRemaining(0);
         }
     }, []);
 
@@ -106,56 +106,8 @@ export const useSubscription = () => {
     }, [profile?.id, profile?.trial_start_date, profile?.trial_end_date, profile?.trial_used, profile?.access_type, updateTrialStateFromDates]);
 
     const activateTrial = async (): Promise<boolean> => {
-        const now = new Date();
-        const endDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const startIso = now.toISOString();
-        const endIso = endDate.toISOString();
-
-        const uid = auth.currentUser?.uid || profile?.id;
-        if (uid && !uid.startsWith('offline-')) {
-            try {
-                await upsertUserProfile(uid, {
-                    trialUsed: true,
-                    trialStartDate: startIso,
-                    trialEndDate: endIso,
-                    accessType: 'trial',
-                });
-            } catch (err) {
-                console.error('Error activating trial in Firestore:', err);
-            }
-        }
-
-        // Update Zustand store
-        const currentProfile = useUserStore.getState().profile;
-        if (currentProfile) {
-            useUserStore.getState().setProfile({
-                ...currentProfile,
-                trial_used: true,
-                trial_start_date: startIso,
-                trial_end_date: endIso,
-                access_type: currentProfile.access_type && currentProfile.access_type !== 'free' ? currentProfile.access_type : 'trial',
-            });
-        }
-
-        updateTrialStateFromDates(startIso, endIso, true, 'trial');
-        setIsTrialActive(true);
-        setHasTrialAvailable(false);
-        setTrialUsed(true);
-        setIsPremium(true);
-
-        // Telemetry
-        if (uid) {
-            import('../lib/firestore').then(({ logAnalyticsEvent }) => {
-                logAnalyticsEvent('journey_events', {
-                    userId: uid,
-                    journeyId: 'app_system',
-                    eventType: 'trial_activated',
-                    eventData: { trialStartDate: startIso, trialEndDate: endIso },
-                });
-            }).catch(() => {});
-        }
-
-        return true;
+        console.warn('Trials are disabled.');
+        return false;
     };
 
     return {
