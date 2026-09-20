@@ -18,7 +18,7 @@ export const FREE_DAILY_STORY_LIMIT = 3;
 export function isAyaPlusUser(profile?: UserProfile | null): boolean {
     if (!profile) return false;
     const accessType = profile.access_type || 'free';
-    return ['aya_plus', 'aya_plus_monthly', 'aya_plus_quarterly', 'aya_plus_annual', 'premium', 'premium_pro', 'trial', 'jee15', 'neet15', 'upsc'].includes(accessType);
+    return ['aya_plus', 'aya_plus_monthly', 'aya_plus_quarterly', 'aya_plus_semi_annual', 'aya_plus_six_month', 'aya_plus_annual', 'premium', 'premium_pro', 'trial', 'jee15', 'neet15', 'upsc'].includes(accessType);
 }
 
 export function getRemainingFreeStories(profile?: UserProfile | null): number {
@@ -48,6 +48,17 @@ export function canAccessStory(profile: UserProfile | null, isStoryPremium: bool
 }
 
 export function getSubscriptionPlanDetails() {
+    const sixMonthPlan = {
+        id: 'aya_plus_semi_annual',
+        name: 'AYA PRO 6 Months',
+        amount: PRICING_CONFIG.six_month_price_inr || 1999,
+        originalAmount: PRICING_CONFIG.six_month_original_inr || 14999,
+        interval: '6 months',
+        monthlyEquiv: `₹${Math.round((PRICING_CONFIG.six_month_price_inr || 1999) / 6)}/mo`,
+        currency: PRICING_CONFIG.currency_symbol,
+        savingsLabel: 'Save 87%'
+    };
+
     return {
         monthly: {
             id: 'aya_plus_monthly',
@@ -58,25 +69,17 @@ export function getSubscriptionPlanDetails() {
             currency: PRICING_CONFIG.currency_symbol,
             savingsLabel: 'Save 34%'
         },
-        threeMonths: {
-            id: 'aya_plus_quarterly',
-            name: 'AYA PRO 3 Months',
-            amount: PRICING_CONFIG.three_month_price_inr,
-            originalAmount: PRICING_CONFIG.three_month_original_inr,
-            interval: '3 months',
-            monthlyEquiv: `₹${Math.round(PRICING_CONFIG.three_month_price_inr / 3)}/mo`,
-            currency: PRICING_CONFIG.currency_symbol,
-            savingsLabel: 'Save 20%'
-        },
+        sixMonths: sixMonthPlan,
+        threeMonths: sixMonthPlan, // alias for backwards compatibility
         annual: {
             id: 'aya_plus_annual',
-            name: 'AYA PRO 1 Year',
+            name: 'AYA PRO 1 Year (12 Months)',
             amount: PRICING_CONFIG.annual_price_inr,
             originalAmount: PRICING_CONFIG.annual_original_inr,
-            interval: 'year',
+            interval: '12 months',
             monthlyEquiv: `₹${Math.round(PRICING_CONFIG.annual_price_inr / 12)}/mo`,
             currency: PRICING_CONFIG.currency_symbol,
-            savingsLabel: 'Best Value · Save 20%'
+            savingsLabel: 'Best Value · Save 88%'
         },
         dnaReport: {
             id: 'aya_dna_career_report',

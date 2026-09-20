@@ -6,6 +6,20 @@ export default async function handler(req, res) {
 
   const { plan_id, user_id, amount, customer_phone = '9999999999' } = req.body;
 
+  // Canonical server-side pricing to ensure price integrity
+  const PLAN_PRICING = {
+    aya_plus_semi_annual: { amount: 1999, label: '6 Months Pass (₹1,999)' },
+    aya_plus_six_month: { amount: 1999, label: '6 Months Pass (₹1,999)' },
+    aya_plus_quarterly: { amount: 1999, label: '6 Months Pass (₹1,999)' },
+    aya_plus_annual: { amount: 2999, label: '12 Months Access (₹2,999)' },
+    aya_plus_monthly: { amount: 99, label: '1 Month Pass (₹99)' },
+  };
+
+  const selectedPlan = PLAN_PRICING[plan_id];
+  // Prefer canonical server-side amount, or validate passed amount
+  const orderAmount = selectedPlan ? selectedPlan.amount : (amount || 1999);
+  const planLabel = selectedPlan ? selectedPlan.label : (plan_id || 'AYA PRO');
+
   const appId = process.env.CASHFREE_APP_ID;
   const secretKey = process.env.CASHFREE_SECRET_KEY;
   const environment = process.env.CASHFREE_ENVIRONMENT || 'SANDBOX'; // SANDBOX or PRODUCTION
@@ -26,7 +40,7 @@ export default async function handler(req, res) {
 
     const orderPayload = {
       order_id: orderId,
-      order_amount: amount,
+      order_amount: orderAmount,
       order_currency: 'INR',
       customer_details: {
         customer_id: user_id || `cust_${Date.now()}`,
@@ -36,7 +50,7 @@ export default async function handler(req, res) {
       order_meta: {
         return_url: returnUrl
       },
-      order_note: `Subscription: ${plan_id}`,
+      order_note: `Subscription: ${plan_id} - ${planLabel}`,
     };
 
     const response = await fetch(`${baseUrl}/orders`, {

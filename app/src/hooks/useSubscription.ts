@@ -19,7 +19,7 @@ export const useSubscription = () => {
     const updateTrialStateFromDates = useCallback((startStr?: string | null, endStr?: string | null, isUsed: boolean = false, accessType?: string | null) => {
         const paid = Boolean(
             accessType &&
-            ['aya_plus', 'aya_plus_monthly', 'aya_plus_quarterly', 'aya_plus_annual', 'premium', 'premium_pro', 'jee15', 'neet15', 'upsc'].includes(accessType)
+            ['aya_plus', 'aya_plus_monthly', 'aya_plus_quarterly', 'aya_plus_semi_annual', 'aya_plus_six_month', 'aya_plus_annual', 'premium', 'premium_pro', 'jee15', 'neet15', 'upsc'].includes(accessType)
         );
         setIsPaid(paid);
 

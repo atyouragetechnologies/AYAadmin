@@ -4,6 +4,7 @@ import { useUserStore } from '../store/userStore';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { audioManager } from '../utils/audioManager';
 import { MascotLoader } from '../components/ui/MascotLoader';
+import { upsertUserProfile } from '../lib/firestore';
 
 export function PaymentVerify() {
     const [searchParams] = useSearchParams();
@@ -44,14 +45,27 @@ export function PaymentVerify() {
                 }
 
                 if (data.success && data.status === 'PAID') {
-                    // Payment succeeded! Update local state
+                    const today = new Date().toISOString().split('T')[0];
+                    const paidPlan = data.plan || 'aya_plus_semi_annual';
+
+                    // 1. Payment succeeded! Update local state
                     if (profile) {
-                        const today = new Date().toISOString().split('T')[0];
                         setProfile({
                             ...profile,
-                            access_type: data.plan || 'premium',
+                            access_type: paidPlan,
                             access_start_date: today
                         });
+
+                        // 2. Persist to Firestore
+                        if (profile.id && !profile.id.startsWith('offline-')) {
+                            upsertUserProfile(profile.id, {
+                                access_type: paidPlan,
+                                accessType: paidPlan,
+                                access_start_date: today,
+                                accessStartDate: today,
+                                access_status: 'active'
+                            }).catch(err => console.warn('[PaymentVerify] Firestore profile update warning:', err));
+                        }
                     }
                     
                     audioSynth.playAchievementMajor();

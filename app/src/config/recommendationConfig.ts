@@ -96,10 +96,12 @@ export const CHALLENGE_MODE_CONFIG = {
 export const PRICING_CONFIG: AyaPricingConfig = {
   monthly_price_inr:     99,
   monthly_original_inr:  149,
-  three_month_price_inr: 199,
-  three_month_original_inr: 249,
-  annual_price_inr:      799,
-  annual_original_inr:   999,
+  three_month_price_inr: 1999,
+  three_month_original_inr: 14999,
+  six_month_price_inr:   1999,
+  six_month_original_inr: 14999,
+  annual_price_inr:      2999,
+  annual_original_inr:   24999,
   report_price_min_inr:  499,
   report_price_max_inr:  999,
   currency:              'INR',
@@ -113,9 +115,15 @@ export const PRICING_DISPLAY = {
   monthly_savings_pct: Math.round(
     (1 - PRICING_CONFIG.monthly_price_inr / PRICING_CONFIG.monthly_original_inr) * 100
   ),
-  three_month: `₹${PRICING_CONFIG.three_month_price_inr} for 3 months`,
+  six_month: `₹${PRICING_CONFIG.six_month_price_inr} for 6 months`,
+  six_month_original: `₹${PRICING_CONFIG.six_month_original_inr}`,
+  six_month_monthly_equiv: `₹${Math.round((PRICING_CONFIG.six_month_price_inr || 1999) / 6)}/month`,
+  six_month_savings_pct: Math.round(
+    (1 - (PRICING_CONFIG.six_month_price_inr || 1999) / (PRICING_CONFIG.six_month_original_inr || 14999)) * 100
+  ),
+  three_month: `₹${PRICING_CONFIG.three_month_price_inr} for 6 months`,
   three_month_original: `₹${PRICING_CONFIG.three_month_original_inr}`,
-  three_month_monthly_equiv: `₹${Math.round(PRICING_CONFIG.three_month_price_inr / 3)}/month`,
+  three_month_monthly_equiv: `₹${Math.round(PRICING_CONFIG.three_month_price_inr / 6)}/month`,
   three_month_savings_pct: Math.round(
     (1 - PRICING_CONFIG.three_month_price_inr / PRICING_CONFIG.three_month_original_inr) * 100
   ),

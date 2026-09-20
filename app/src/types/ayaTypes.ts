@@ -274,6 +274,8 @@ export interface AyaPricingConfig {
   monthly_original_inr: number;
   three_month_price_inr: number;
   three_month_original_inr: number;
+  six_month_price_inr?: number;
+  six_month_original_inr?: number;
   annual_price_inr: number;
   annual_original_inr: number;
   report_price_min_inr: number;

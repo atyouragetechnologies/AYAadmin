@@ -2,7 +2,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const PREMIUM_TIERS = ['aya_plus', 'jee15', 'neet15', 'upsc'];
+const PREMIUM_TIERS = ['aya_plus', 'aya_plus_monthly', 'aya_plus_quarterly', 'aya_plus_semi_annual', 'aya_plus_six_month', 'aya_plus_annual', 'premium', 'premium_pro', 'jee15', 'neet15', 'upsc'];
 
 function todayUtc(): string {
     return new Date().toISOString().split('T')[0]; // YYYY-MM-DD, always UTC

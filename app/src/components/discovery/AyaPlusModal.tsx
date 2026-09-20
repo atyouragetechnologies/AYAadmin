@@ -19,14 +19,15 @@ export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
 
     if (!isOpen) return null;
 
-    const handleUpgrade = async (plan: 'monthly' | 'annual') => {
+    const handleUpgrade = async (plan: 'monthly' | 'semi_annual' | 'annual') => {
         audioManager.playClick();
         setIsUpgrading(true);
 
         // Record subscription in database if authenticated
         if (profile?.id && !profile.id.startsWith('offline-')) {
             try {
-                const expiresAt = new Date(Date.now() + (plan === 'annual' ? 365 : 30) * 86400000).toISOString();
+                const durationDays = plan === 'annual' ? 365 : plan === 'semi_annual' ? 180 : 30;
+                const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString();
                 await upsertUserProfile(profile.id, {
                     accessType: 'aya_plus',
                     accessStartDate: new Date().toISOString(),
@@ -34,6 +35,7 @@ export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
                 logAnalyticsEvent('subscriptions', {
                     userId: profile.id,
                     tier: 'plus',
+                    plan: plan,
                     status: 'active',
                     startsAt: new Date().toISOString(),
                     expiresAt,
@@ -88,10 +90,11 @@ export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
                         </div>
                         <div>
                             <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1">
-                                <Sparkles size={12} className="text-amber-400" />
-                                Premium Life Navigation
+                                <Sparkles size={11} /> Premium Upgrade
                             </span>
-                            <h2 className="text-2xl font-black text-white">AYA PRO Experience</h2>
+                            <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wide">
+                                Unlock <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">AYA+</span>
+                            </h2>
                         </div>
                     </div>
 
@@ -114,16 +117,16 @@ export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
                         )}
                     </div>
 
-                    <p className="text-xs text-slate-300 font-medium mb-5 leading-relaxed">
-                        Elevate your journey with unlimited stories, real-time DNA evolution, deeper career guidance, and all upcoming premium features.
+                    <p className="text-xs text-slate-300 mb-5 leading-relaxed">
+                        Step beyond the daily limit. Transform daily dilemmas into deep, lasting mental models.
                     </p>
 
-                    {/* Features List */}
+                    {/* Feature List */}
                     <div className="space-y-2 mb-6">
                         {PLUS_FEATURES.map((feature, idx) => (
-                            <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-200 font-medium">
-                                <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
-                                    <Check size={12} strokeWidth={3} />
+                            <div key={idx} className="flex items-center gap-2.5 text-xs text-slate-200">
+                                <div className="w-4 h-4 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 shrink-0">
+                                    <Check size={10} strokeWidth={3} />
                                 </div>
                                 <span>{feature}</span>
                             </div>
@@ -152,19 +155,19 @@ export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
 
                         <button
                             type="button"
-                            onClick={() => handleUpgrade('monthly')}
+                            onClick={() => handleUpgrade('semi_annual')}
                             disabled={isUpgrading || isSuccess}
                             className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-cyan-400/60 hover:bg-white/[0.06] text-left transition-all group"
                         >
                             <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-cyan-300 uppercase">3 Months</span>
-                                <span className="text-[9px] font-bold text-cyan-400">Save 20%</span>
+                                <span className="text-[10px] font-bold text-cyan-300 uppercase">6 Months</span>
+                                <span className="text-[9px] font-bold text-cyan-400">Save 87%</span>
                             </div>
                             <div className="flex items-baseline gap-1.5 mt-1">
-                                <span className="line-through text-slate-500 text-xs">₹249</span>
-                                <span className="text-lg font-black text-white">₹199</span>
+                                <span className="line-through text-slate-500 text-xs">₹14,999</span>
+                                <span className="text-lg font-black text-white">₹1,999</span>
                             </div>
-                            <div className="text-[10px] text-cyan-300/90 font-medium mt-1">₹66 / month</div>
+                            <div className="text-[10px] text-cyan-300/90 font-medium mt-1">₹333 / month</div>
                         </button>
 
                         <button
@@ -174,15 +177,15 @@ export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
                             className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-400/50 hover:border-amber-300 hover:bg-amber-500/20 text-left transition-all relative group shadow-[0_0_20px_rgba(245,158,11,0.15)]"
                         >
                             <div className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-[9px] font-black text-slate-950 uppercase tracking-wider">
-                                Best Value
+                                Best Value · Save 88%
                             </div>
-                            <div className="text-[10px] font-bold text-amber-300 uppercase">1 Year Plan</div>
+                            <div className="text-[10px] font-bold text-amber-300 uppercase">12 Months Plan</div>
                             <div className="flex items-baseline gap-1.5 mt-1">
-                                <span className="line-through text-slate-400 text-xs">₹999</span>
-                                <span className="text-lg font-black text-white">₹799</span>
+                                <span className="line-through text-slate-400 text-xs">₹24,999</span>
+                                <span className="text-lg font-black text-white">₹2,999</span>
                                 <span className="text-[10px] text-slate-400">/yr</span>
                             </div>
-                            <div className="text-[10px] text-amber-300/90 font-medium mt-1">₹66 / month</div>
+                            <div className="text-[10px] text-amber-300/90 font-medium mt-1">₹250 / month</div>
                         </button>
                     </div>
 

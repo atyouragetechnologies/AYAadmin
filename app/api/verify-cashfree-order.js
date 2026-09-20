@@ -45,12 +45,12 @@ export default async function handler(req, res) {
     const userId = data.customer_details?.customer_id;
     // e.g. "Subscription: aya_plus_monthly"
     const orderNote = data.order_note || '';
-    let plan = 'aya_plus';
-    if (orderNote.includes('aya_plus_annual') || orderNote.includes('annual')) {
+    let plan = 'aya_plus_semi_annual';
+    if (orderNote.includes('aya_plus_annual') || orderNote.includes('annual') || orderNote.includes('12month')) {
       plan = 'aya_plus_annual';
-    } else if (orderNote.includes('aya_plus_quarterly') || orderNote.includes('quarterly') || orderNote.includes('3month')) {
-      plan = 'aya_plus_quarterly';
-    } else if (orderNote.includes('aya_plus_monthly') || orderNote.includes('monthly')) {
+    } else if (orderNote.includes('aya_plus_semi_annual') || orderNote.includes('semi_annual') || orderNote.includes('6month') || orderNote.includes('aya_plus_quarterly') || orderNote.includes('quarterly') || orderNote.includes('3month')) {
+      plan = 'aya_plus_semi_annual';
+    } else if (orderNote.includes('aya_plus_monthly') || orderNote.includes('monthly') || orderNote.includes('1month')) {
       plan = 'aya_plus_monthly';
     } else if (orderNote.includes('premium_pro')) {
       plan = 'premium_pro';

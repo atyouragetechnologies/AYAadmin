@@ -285,30 +285,30 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
               disabled={loadingPlan !== null}
               className="w-full py-3 rounded-xl font-bold uppercase text-xs tracking-wider text-white bg-slate-700 hover:bg-slate-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loadingPlan === plans.monthly.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Get 1 Month · ₹99'}
+              {loadingPlan === plans.monthly.id ? <Loader2 className="w-4 h-4 animate-spin" /> : `Get 1 Month · ₹${plans.monthly.amount}`}
             </button>
           </div>
 
-          {/* 2. 3 Months Plan */}
+          {/* 2. 6 Months Plan */}
           <div className="flex flex-col bg-slate-800/60 rounded-2xl border border-slate-700/80 p-5 sm:p-6 hover:border-cyan-400/50 transition-all flex-1 relative">
             <div className="mb-4">
               <div className="flex items-center justify-between mb-1.5">
-                <h3 className="text-lg font-bold text-cyan-300">3 Months Pass</h3>
+                <h3 className="text-lg font-bold text-cyan-300">6 Months Pass</h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                  Save 20%
+                  Save 87%
                 </span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="line-through text-slate-500 text-sm font-semibold">₹{plans.threeMonths.originalAmount}</span>
-                <span className="text-3xl font-black text-white">{plans.threeMonths.currency}{plans.threeMonths.amount}</span>
-                <span className="text-slate-400 text-xs">/3 mo ({plans.threeMonths.monthlyEquiv})</span>
+                <span className="line-through text-slate-500 text-sm font-semibold">₹{plans.sixMonths.originalAmount}</span>
+                <span className="text-3xl font-black text-white">{plans.sixMonths.currency}{plans.sixMonths.amount}</span>
+                <span className="text-slate-400 text-xs">/6 mo ({plans.sixMonths.monthlyEquiv})</span>
               </div>
             </div>
             
             <ul className="flex-1 space-y-2.5 mb-6 text-xs text-slate-300">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span className="font-semibold text-white">Full 3-Month uninterrupted access</span>
+                <span className="font-semibold text-white">Full 6-Month uninterrupted access</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
@@ -325,25 +325,25 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
             </ul>
 
             <button 
-              onClick={() => handleSubscribe(plans.threeMonths.id, plans.threeMonths.amount)}
+              onClick={() => handleSubscribe(plans.sixMonths.id, plans.sixMonths.amount)}
               disabled={loadingPlan !== null}
               className="w-full py-3 rounded-xl font-bold uppercase text-xs tracking-wider text-slate-950 bg-cyan-400 hover:bg-cyan-300 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loadingPlan === plans.threeMonths.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Get 3 Months · ₹199'}
+              {loadingPlan === plans.sixMonths.id ? <Loader2 className="w-4 h-4 animate-spin" /> : `Get 6 Months · ₹${plans.sixMonths.amount}`}
             </button>
           </div>
 
-          {/* 3. 1 Year Plan (Hero / Best Value) */}
+          {/* 3. 1 Year / 12 Months Plan (Hero / Best Value) */}
           <div className="flex flex-col bg-gradient-to-b from-purple-900/40 via-slate-800/90 to-slate-900 rounded-2xl border-2 border-purple-500 p-5 sm:p-6 relative shadow-[0_0_30px_rgba(168,85,247,0.25)] hover:shadow-[0_0_40px_rgba(168,85,247,0.35)] transition-all flex-1">
             <div className="absolute top-0 right-6 -translate-y-1/2 bg-gradient-to-r from-purple-500 to-cyan-400 text-slate-950 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-md">
-              Best Value · Save 20%
+              Best Value · Save 88%
             </div>
             <div className="mb-4">
-              <h3 className="text-lg font-bold text-purple-300 mb-1">1 Year Access</h3>
+              <h3 className="text-lg font-bold text-purple-300 mb-1">12 Months Access</h3>
               <div className="flex items-baseline gap-2">
                 <span className="line-through text-slate-400 text-sm font-semibold">₹{plans.annual.originalAmount}</span>
                 <span className="text-3xl font-black text-white">{plans.annual.currency}{plans.annual.amount}</span>
-                <span className="text-slate-400 text-xs">/yr ({plans.annual.monthlyEquiv})</span>
+                <span className="text-slate-400 text-xs">/12 mo ({plans.annual.monthlyEquiv})</span>
               </div>
             </div>
             
@@ -375,7 +375,7 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
               disabled={loadingPlan !== null}
               className="w-full py-3 rounded-xl font-black uppercase text-xs tracking-wider text-slate-950 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
             >
-              {loadingPlan === plans.annual.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Get 1 Year · ₹799'}
+              {loadingPlan === plans.annual.id ? <Loader2 className="w-4 h-4 animate-spin" /> : `Get 12 Months · ₹${plans.annual.amount}`}
             </button>
           </div>
 

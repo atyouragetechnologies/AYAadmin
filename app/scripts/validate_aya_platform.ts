@@ -157,8 +157,10 @@ assert(canAccessStory(freeUser, true) === false, 'Free user CANNOT access premiu
 assert(canAccessStory(ayaPlusUser, true) === true, 'AYA+ user CAN access premium stories');
 
 const plans = getSubscriptionPlanDetails();
-assert(plans.monthly.amount === 199, 'Monthly plan is configurable at ₹199');
-assert(plans.annual.amount === 999, 'Annual plan is configurable at ₹999');
+assert(plans.sixMonths.amount === 1999, '6 Months plan is configurable at ₹1999');
+assert(plans.sixMonths.originalAmount === 14999, '6 Months plan original price is ₹14999');
+assert(plans.annual.amount === 2999, 'Annual 12 Months plan is configurable at ₹2999');
+assert(plans.annual.originalAmount === 24999, 'Annual 12 Months plan original price is ₹24999');
 assert(plans.dnaReport.amount === 499, 'One-time report is configurable at ₹499');
 
 console.log('');
