@@ -116,58 +116,41 @@ export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
                     </div>
 
                     {/* Pricing Plans */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-                        <button
-                            type="button"
-                            onClick={() => handleUpgrade('monthly')}
-                            disabled={isUpgrading || isSuccess}
-                            className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-amber-400/60 hover:bg-white/[0.06] text-left transition-all group"
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase">1 Month</span>
-                                <span className="text-[9px] font-bold text-amber-400">Save 34%</span>
-                            </div>
-                            <div className="flex items-baseline gap-1.5 mt-1">
-                                <span className="line-through text-slate-500 text-xs">₹149</span>
-                                <span className="text-lg font-black text-white">₹99</span>
-                                <span className="text-[10px] text-slate-400">/mo</span>
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-medium mt-1">Cancel anytime</div>
-                        </button>
-
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                         <button
                             type="button"
                             onClick={() => handleUpgrade('semi_annual')}
                             disabled={isUpgrading || isSuccess}
-                            className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-cyan-400/60 hover:bg-white/[0.06] text-left transition-all group"
+                            className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-cyan-400/60 hover:bg-white/[0.06] text-left transition-all group"
                         >
                             <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-cyan-300 uppercase">6 Months</span>
-                                <span className="text-[9px] font-bold text-cyan-400">Save 87%</span>
+                                <span className="text-xs font-bold text-cyan-300 uppercase">🚀 6 Months</span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">86.7% OFF</span>
                             </div>
-                            <div className="flex items-baseline gap-1.5 mt-1">
+                            <div className="flex items-baseline gap-2 mt-2">
+                                <span className="text-2xl font-black text-white">₹1,999</span>
                                 <span className="line-through text-slate-500 text-xs">₹14,999</span>
-                                <span className="text-lg font-black text-white">₹1,999</span>
                             </div>
-                            <div className="text-[10px] text-cyan-300/90 font-medium mt-1">₹333 / month</div>
+                            <div className="text-xs text-cyan-300/90 font-medium mt-1">₹333 / month</div>
                         </button>
 
                         <button
                             type="button"
                             onClick={() => handleUpgrade('annual')}
                             disabled={isUpgrading || isSuccess}
-                            className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-400/50 hover:border-amber-300 hover:bg-amber-500/20 text-left transition-all relative group shadow-[0_0_20px_rgba(245,158,11,0.15)]"
+                            className="p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-400/70 hover:border-amber-300 hover:bg-amber-500/20 text-left transition-all relative group shadow-[0_0_25px_rgba(245,158,11,0.2)]"
                         >
-                            <div className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-[9px] font-black text-slate-950 uppercase tracking-wider">
-                                Best Value · Save 88%
+                            <div className="absolute -top-2.5 right-3 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-[9px] font-black text-slate-950 uppercase tracking-wider shadow">
+                                Recommended · 88% OFF
                             </div>
-                            <div className="text-[10px] font-bold text-amber-300 uppercase">12 Months Plan</div>
-                            <div className="flex items-baseline gap-1.5 mt-1">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-amber-300 uppercase">⭐ 12 Months</span>
+                            </div>
+                            <div className="flex items-baseline gap-2 mt-2">
+                                <span className="text-2xl font-black text-white">₹2,999</span>
                                 <span className="line-through text-slate-400 text-xs">₹24,999</span>
-                                <span className="text-lg font-black text-white">₹2,999</span>
-                                <span className="text-[10px] text-slate-400">/yr</span>
                             </div>
-                            <div className="text-[10px] text-amber-300/90 font-medium mt-1">₹250 / month</div>
+                            <div className="text-xs text-amber-300/90 font-medium mt-1">₹250 / month</div>
                         </button>
                     </div>
 

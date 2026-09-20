@@ -11,32 +11,59 @@
 
 import { PRICING_CONFIG } from '../config/recommendationConfig';
 import type { UserProfile } from '../types/gameTypes';
+import { useUserStore } from '../store/userStore';
 
 // Free-tier users may play a maximum of 3 stories in their entire lifetime.
 export const FREE_LIFETIME_STORY_LIMIT = 3;
 export const FREE_DAILY_STORY_LIMIT = 3; // Kept for backwards compatibility with imports, but used as lifetime limit.
 
 export function isAyaPlusUser(profile?: UserProfile | null): boolean {
-    if (!profile) return false;
-    const accessType = profile.access_type || 'free';
-    return ['aya_plus', 'aya_plus_monthly', 'aya_plus_quarterly', 'aya_plus_semi_annual', 'aya_plus_six_month', 'aya_plus_annual', 'premium', 'premium_pro', 'trial', 'jee15', 'neet15', 'upsc'].includes(accessType);
+    const activeProfile = profile || useUserStore.getState().profile;
+    if (!activeProfile) return false;
+    const accessType = activeProfile.access_type || 'free';
+    // Strict paid tiers only — 'trial' removed completely
+    return ['aya_plus', 'aya_plus_monthly', 'aya_plus_quarterly', 'aya_plus_semi_annual', 'aya_plus_six_month', 'aya_plus_annual', 'premium', 'premium_pro', 'jee15', 'neet15', 'upsc'].includes(accessType);
+}
+
+export function getCompletedStoriesCount(profile?: UserProfile | null): number {
+    const storeState = useUserStore.getState();
+    const activeProfile = profile || storeState.profile;
+
+    // 1. Check profile counters
+    const profileCompleted = Math.max(
+        activeProfile?.stories_completed || 0,
+        activeProfile?.story_count || 0
+    );
+
+    // 2. Check levelScores from local Zustand store
+    const levelScores = storeState.levelScores || {};
+    const scoreCompleted = Object.values(levelScores).filter((s) => (Number(s) || 0) > 0).length;
+
+    // 3. Check levels array for completed status
+    const levelsCompleted = (storeState.levels || []).filter((l) => l.status === 'completed').length;
+
+    return Math.max(profileCompleted, scoreCompleted, levelsCompleted);
 }
 
 export function getRemainingFreeStories(profile?: UserProfile | null): number {
-    if (!profile) return FREE_LIFETIME_STORY_LIMIT;
-    if (isAyaPlusUser(profile)) return 999;
+    const storeState = useUserStore.getState();
+    const activeProfile = profile || storeState.profile;
+    if (isAyaPlusUser(activeProfile)) return 999;
 
-    // AYA uses a strict lifetime limit for free users. No daily refills.
-    const completed = profile.stories_completed || 0;
+    // AYA uses a strict lifetime limit of 3 stories for free users.
+    const completed = getCompletedStoriesCount(activeProfile);
     return Math.max(0, FREE_LIFETIME_STORY_LIMIT - completed);
 }
 
 export function canPlayStory(profile: UserProfile | null, isStoryPremium: boolean = false): { allowed: boolean, reason?: 'limit_reached' | 'premium_only' } {
-    if (isAyaPlusUser(profile)) return { allowed: true };
+    const storeState = useUserStore.getState();
+    const activeProfile = profile || storeState.profile;
+
+    if (isAyaPlusUser(activeProfile)) return { allowed: true };
     
     if (isStoryPremium) return { allowed: false, reason: 'premium_only' };
     
-    const remaining = getRemainingFreeStories(profile);
+    const remaining = getRemainingFreeStories(activeProfile);
     if (remaining <= 0) return { allowed: false, reason: 'limit_reached' };
     
     return { allowed: true };

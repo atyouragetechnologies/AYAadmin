@@ -150,75 +150,75 @@ export const AYA_PLAN_COMPARISON = [
   { 
     key: 'stories',
     feature: 'Story & Library Access', 
-    free: '3 stories total', 
+    free: '3 stories trial (Lifetime limit)', 
     pro: 'Unlimited stories & Full story library', 
     highlightPro: true 
   },
   { 
     key: 'gameplay',
     feature: 'Interactive Gameplay', 
-    free: 'Full gameplay, choices, consequences, comparison & learning', 
-    pro: 'Full gameplay, choices, consequences, comparison & learning', 
-    highlightPro: false 
+    free: 'Full gameplay for your 3 trial stories', 
+    pro: 'Full gameplay across all stories, choices & consequences', 
+    highlightPro: true 
   },
   { 
     key: 'personality_match',
     feature: 'Personality Match', 
-    free: 'Personality Match', 
-    pro: 'Personality Match & deep role-model archetype insights', 
-    highlightPro: false 
+    free: 'Initial personality match from trial stories', 
+    pro: 'Deep personality match & role-model archetype insights', 
+    highlightPro: true 
   },
   { 
     key: 'dna_report',
     feature: 'DNA Report & Evolution', 
-    free: '1 complete DNA report after initial experience', 
-    pro: 'DNA evolution based on continued gameplay and choices', 
+    free: '1 baseline DNA report (after 3 stories)', 
+    pro: 'Continuous DNA evolution based on choices & gameplay', 
     highlightPro: true 
   },
   { 
     key: 'dna_insights',
     feature: 'Refined DNA Insights', 
-    free: 'Initial baseline DNA report', 
-    pro: 'More refined / personalized DNA insights over time', 
+    free: 'Initial baseline DNA report only', 
+    pro: 'Continuous refined & personalized DNA insights over time', 
     highlightPro: true 
   },
   { 
     key: 'career_matches',
     feature: 'Career Guidance', 
-    free: 'Career matches based on DNA', 
-    pro: 'Full / deeper career recommendations', 
+    free: 'Basic career matches from trial stories', 
+    pro: 'Full & deeper career recommendations & roadmaps', 
     highlightPro: true 
   },
   { 
     key: 'journal',
     feature: 'Journal & Weekly Progress', 
-    free: 'Journal', 
+    free: 'Journal (for 3 trial stories)', 
     pro: 'Journal + Weekly progress / DNA report (when available)', 
     highlightPro: true 
   },
   { 
     key: 'dealing_with',
     feature: '“What Are You Dealing With?” Search', 
-    free: 'Limited searches to section', 
-    pro: 'Unlimited searches & Personalized story recommendations', 
+    free: 'Preview only (locked after 3 stories)', 
+    pro: 'Unlimited searches & personalized recommendations', 
     highlightPro: true 
   },
   { 
     key: 'future_premium',
     feature: 'Future Features', 
     free: '—', 
-    pro: 'All future Premium features included', 
+    pro: 'All future updates & Premium features included', 
     highlightPro: true 
   },
 ] as const;
 
 export const AYAPRO_BENEFITS = [
-  { key: 'stories',        label: 'Unlimited stories & Full story library',             free: '3 stories total' },
+  { key: 'stories',        label: 'Unlimited stories & Full story library',             free: '3 stories trial' },
   { key: 'dna_evolution',  label: 'DNA evolution based on continued gameplay & choices',free: '1 DNA report only' },
-  { key: 'dna_insights',   label: 'More refined/personalized DNA insights over time',   free: 'Initial report' },
-  { key: 'career',         label: 'Full / deeper career recommendations',               free: 'Basic matches' },
+  { key: 'dna_insights',   label: 'More refined/personalized DNA insights over time',   free: 'Initial report only' },
+  { key: 'career',         label: 'Full / deeper career recommendations',               free: 'Preview matches' },
   { key: 'recommendations',label: 'Personalized story recommendations',                 free: '—' },
-  { key: 'search',         label: 'Unlimited “What Are You Dealing With?” searches',    free: 'Limited searches' },
+  { key: 'search',         label: 'Unlimited “What Are You Dealing With?” searches',    free: 'Preview only' },
   { key: 'weekly_recap',   label: 'Weekly progress / DNA report when available',        free: '—' },
   { key: 'future_premium', label: 'VIP access to all future Premium features',          free: '—' },
 ] as const;
