@@ -119,13 +119,13 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
         <div className="text-center mb-6 sm:mb-8">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-xs font-bold uppercase tracking-wider mb-3">
             <Crown size={14} className="text-amber-400" />
-            <span>AYA PRO Life Navigation</span>
+            <span>AYA Life Navigation</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white uppercase tracking-tight mb-2">
-            Unlock <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400">AYA PRO</span> & Your Full DNA Evolution
+            Choose Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400">AYA Journey</span>
           </h2>
-          <p className="text-slate-300 max-w-xl mx-auto text-xs sm:text-sm leading-relaxed">
-            Gain unlimited story access, continuous DNA trait evolution, personalized recommendations, deeper career guidance, and all upcoming premium features.
+          <p className="text-slate-300 max-w-2xl mx-auto text-xs sm:text-sm leading-relaxed">
+            Build better self-awareness, make smarter decisions, explore career possibilities, and learn from real-life stories of people who have already been where you are.
           </p>
           {error && (
             <div className="mt-4 p-3 bg-red-500/20 border border-red-500 text-red-400 rounded-xl text-sm">
@@ -242,140 +242,169 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
           </div>
         )}
 
-        {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 items-stretch mb-8">
+        {/* Pricing Cards Grid - 2 Tiers: 6-Month Journey & 12-Month Journey */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 items-stretch mb-8">
           
-          {/* 1. Monthly Plan (1 Month) */}
-          <div className="flex flex-col bg-slate-800/60 rounded-2xl border border-slate-700/80 p-5 sm:p-6 hover:border-purple-400/50 transition-all flex-1 relative">
+          {/* 1. 6-Month Journey */}
+          <div className="flex flex-col bg-slate-800/60 rounded-3xl border border-slate-700/80 p-6 sm:p-7 hover:border-cyan-400/50 transition-all flex-1 relative shadow-xl">
             <div className="mb-4">
-              <div className="flex items-center justify-between mb-1.5">
-                <h3 className="text-lg font-bold text-white">1 Month Pass</h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  Save 34%
+              <h3 className="text-xl sm:text-2xl font-black text-cyan-300 flex items-center gap-2">
+                <span>🚀</span> 6-Month Journey
+              </h3>
+              <div className="flex items-baseline gap-2.5 mt-2 flex-wrap">
+                <span className="text-3xl sm:text-4xl font-black text-white">₹1,999</span>
+                <span className="line-through text-slate-500 text-base font-semibold">₹14,999</span>
+                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  86.7% OFF
                 </span>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="line-through text-slate-500 text-sm font-semibold">₹{plans.monthly.originalAmount}</span>
-                <span className="text-3xl font-black text-white">{plans.monthly.currency}{plans.monthly.amount}</span>
-                <span className="text-slate-400 text-xs">/month</span>
+              <div className="text-xs text-slate-400 font-medium mt-1">
+                That's just <strong className="text-cyan-300 font-bold">₹333/month</strong>
               </div>
+            </div>
+
+            <div className="mt-2 mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+              What you get:
             </div>
             
             <ul className="flex-1 space-y-2.5 mb-6 text-xs text-slate-300">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                <span>Unlimited stories & full story library</span>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span>Full access to AYA's personalized learning journey</span>
               </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                <span>DNA evolution based on ongoing gameplay</span>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span>Personality & self-awareness assessment</span>
               </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                <span>Full/deeper career recommendations</span>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span>Real-life decision-making scenarios</span>
               </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                <span>Personalized story recommendations</span>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span>Stories and experiences from inspiring personalities</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span>Career & strengths exploration</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span>Personalized DNA insights</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span>Progress tracking, scores & streaks</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span>Regular new learning experiences</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span>Journal & reflection activities</span>
               </li>
             </ul>
 
-            <button 
-              onClick={() => handleSubscribe(plans.monthly.id, plans.monthly.amount)}
-              disabled={loadingPlan !== null}
-              className="w-full py-3 rounded-xl font-bold uppercase text-xs tracking-wider text-white bg-slate-700 hover:bg-slate-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {loadingPlan === plans.monthly.id ? <Loader2 className="w-4 h-4 animate-spin" /> : `Get 1 Month · ₹${plans.monthly.amount}`}
-            </button>
-          </div>
-
-          {/* 2. 6 Months Plan */}
-          <div className="flex flex-col bg-slate-800/60 rounded-2xl border border-slate-700/80 p-5 sm:p-6 hover:border-cyan-400/50 transition-all flex-1 relative">
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-1.5">
-                <h3 className="text-lg font-bold text-cyan-300">6 Months Pass</h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                  Save 87%
-                </span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="line-through text-slate-500 text-sm font-semibold">₹{plans.sixMonths.originalAmount}</span>
-                <span className="text-3xl font-black text-white">{plans.sixMonths.currency}{plans.sixMonths.amount}</span>
-                <span className="text-slate-400 text-xs">/6 mo ({plans.sixMonths.monthlyEquiv})</span>
-              </div>
+            <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-700/60 text-xs text-slate-300 mb-6 leading-relaxed">
+              <strong className="text-cyan-300">Best for:</strong> Students who want to explore AYA and build a stronger understanding of themselves over 6 months.
             </div>
-            
-            <ul className="flex-1 space-y-2.5 mb-6 text-xs text-slate-300">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span className="font-semibold text-white">Full 6-Month uninterrupted access</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span>Continuous DNA evolution & insights</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span>Full & deeper career recommendations</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span>Personalized story recommendations</span>
-              </li>
-            </ul>
 
             <button 
               onClick={() => handleSubscribe(plans.sixMonths.id, plans.sixMonths.amount)}
               disabled={loadingPlan !== null}
-              className="w-full py-3 rounded-xl font-bold uppercase text-xs tracking-wider text-slate-950 bg-cyan-400 hover:bg-cyan-300 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl font-black uppercase text-xs sm:text-sm tracking-wider text-slate-950 bg-cyan-400 hover:bg-cyan-300 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] cursor-pointer"
             >
-              {loadingPlan === plans.sixMonths.id ? <Loader2 className="w-4 h-4 animate-spin" /> : `Get 6 Months · ₹${plans.sixMonths.amount}`}
+              {loadingPlan === plans.sixMonths.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Start 6-Month Journey'}
             </button>
           </div>
 
-          {/* 3. 1 Year / 12 Months Plan (Hero / Best Value) */}
-          <div className="flex flex-col bg-gradient-to-b from-purple-900/40 via-slate-800/90 to-slate-900 rounded-2xl border-2 border-purple-500 p-5 sm:p-6 relative shadow-[0_0_30px_rgba(168,85,247,0.25)] hover:shadow-[0_0_40px_rgba(168,85,247,0.35)] transition-all flex-1">
-            <div className="absolute top-0 right-6 -translate-y-1/2 bg-gradient-to-r from-purple-500 to-cyan-400 text-slate-950 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-md">
-              Best Value · Save 88%
+          {/* 2. 12-Month Journey — Recommended */}
+          <div className="flex flex-col bg-gradient-to-b from-purple-950/50 via-slate-800/90 to-slate-900 rounded-3xl border-2 border-amber-400/80 p-6 sm:p-7 relative shadow-[0_0_40px_rgba(245,158,11,0.2)] hover:shadow-[0_0_50px_rgba(245,158,11,0.3)] transition-all flex-1">
+            <div className="absolute top-0 right-6 -translate-y-1/2 bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 text-[11px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full shadow-lg border border-amber-200/50 flex items-center gap-1">
+              <Sparkles size={12} className="text-slate-950 fill-slate-950" /> Recommended · 88% OFF
             </div>
+
             <div className="mb-4">
-              <h3 className="text-lg font-bold text-purple-300 mb-1">12 Months Access</h3>
-              <div className="flex items-baseline gap-2">
-                <span className="line-through text-slate-400 text-sm font-semibold">₹{plans.annual.originalAmount}</span>
-                <span className="text-3xl font-black text-white">{plans.annual.currency}{plans.annual.amount}</span>
-                <span className="text-slate-400 text-xs">/12 mo ({plans.annual.monthlyEquiv})</span>
+              <h3 className="text-xl sm:text-2xl font-black text-amber-300 flex items-center gap-2">
+                <span>⭐</span> 12-Month Journey
+              </h3>
+              <div className="flex items-baseline gap-2.5 mt-2 flex-wrap">
+                <span className="text-3xl sm:text-4xl font-black text-white">₹2,999</span>
+                <span className="line-through text-slate-400 text-base font-semibold">₹24,999</span>
+                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  88% OFF
+                </span>
+              </div>
+              <div className="text-xs text-slate-300 font-medium mt-1">
+                That's just <strong className="text-amber-300 font-bold">₹250/month</strong>
               </div>
             </div>
+
+            <div className="mt-2 mb-3 text-xs font-bold uppercase tracking-wider text-amber-300/90 flex items-center gap-1.5">
+              <Sparkles size={13} className="text-amber-400" />
+              Everything in the 6-month plan, plus:
+            </div>
             
-            <ul className="flex-1 space-y-2.5 mb-6 text-xs text-slate-200">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span className="font-semibold text-white">Unlimited stories & Full library</span>
+            <ul className="flex-1 space-y-2.5 mb-5 text-xs text-slate-200">
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span className="font-semibold text-white">12 months of continuous access</span>
               </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span>Continuous DNA evolution & refined insights</span>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>More time to understand your strengths, weaknesses & interests</span>
               </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span>Full & deeper career recommendations</span>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>Your DNA evolves as your choices and performance change</span>
               </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span>Weekly progress & DNA reports</span>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>Long-term progress tracking</span>
               </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span className="text-amber-300 font-semibold">All future Premium features included</span>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>More opportunities to explore different career paths</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>Build better decision-making habits over time</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>Continue your journey through academic and personal milestones</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span className="text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30">
+                  6 extra months for only ₹1,000 more
+                </span>
               </li>
             </ul>
+
+            {/* Why choose 12 months? Callout Box */}
+            <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/30 text-xs text-slate-200 mb-6 leading-relaxed">
+              <div className="font-bold text-amber-300 flex items-center gap-1.5 mb-1 text-xs">
+                <span>💡</span> Why choose 12 months?
+              </div>
+              <p className="text-[11.5px] text-slate-300 leading-relaxed">
+                College and career decisions don't happen in a few weeks.
+              </p>
+              <p className="text-[11.5px] text-slate-300 leading-relaxed mt-1">
+                With 12 months, AYA stays with you through an entire year — helping you understand yourself, reflect on your choices, explore possibilities and keep improving.
+              </p>
+              <div className="mt-2.5 pt-2 border-t border-amber-500/20 text-[11.5px] font-bold text-amber-200">
+                ₹2,999 for an entire year = approximately ₹250/month.
+              </div>
+            </div>
 
             <button 
               onClick={() => handleSubscribe(plans.annual.id, plans.annual.amount)}
               disabled={loadingPlan !== null}
-              className="w-full py-3 rounded-xl font-black uppercase text-xs tracking-wider text-slate-950 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+              className="w-full py-3.5 rounded-xl font-black uppercase text-xs sm:text-sm tracking-wider text-slate-950 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.6)] cursor-pointer"
             >
-              {loadingPlan === plans.annual.id ? <Loader2 className="w-4 h-4 animate-spin" /> : `Get 12 Months · ₹${plans.annual.amount}`}
+              {loadingPlan === plans.annual.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Start 12-Month Journey'}
             </button>
           </div>
 
