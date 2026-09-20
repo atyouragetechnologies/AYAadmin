@@ -83,6 +83,7 @@ export default defineConfig({
     }
   },
   build: {
+    target: 'es2020',
     chunkSizeWarningLimit: 1200,
     minify: 'terser',
     terserOptions: {

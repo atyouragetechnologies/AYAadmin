@@ -17,7 +17,7 @@ class BGMManager {
 
   // Must be called on user gesture to initialize and resume audio
   async unlock() {
-    unlockAudio().catch(() => {});
+    unlockAudio();
     const ctx = this.getContext()
     if (!ctx) return; // iOS blocked AudioContext — skip silently
     

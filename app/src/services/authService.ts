@@ -242,6 +242,8 @@ export const authService = {
                 }
             } else if (err.code === 'auth/weak-password') {
                 throw new Error('Password should be at least 6 characters.');
+            } else if (err.code === 'auth/operation-not-allowed') {
+                throw new Error('Email/Password authentication is not enabled in Firebase Console. Please enable it in Firebase Authentication -> Sign-in method.');
             } else {
                 throw new Error(err.message || 'Could not create account. Please try again.');
             }
@@ -270,6 +272,9 @@ export const authService = {
             const cred = await signInWithEmailAndPassword(auth, email, password);
             return handlePostSignIn(cred.user);
         } catch (err: any) {
+            if (err.code === 'auth/operation-not-allowed') {
+                throw new Error('Email/Password auth is not enabled in Firebase. Please enable it.');
+            }
             if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
                 throw new Error('Invalid phone number or password.');
             }
@@ -304,6 +309,8 @@ export const authService = {
                 }
             } else if (err.code === 'auth/weak-password') {
                 throw new Error('Password should be at least 6 characters.');
+            } else if (err.code === 'auth/operation-not-allowed') {
+                throw new Error('Email/Password authentication is not enabled in Firebase Console. Please enable it in Firebase Authentication -> Sign-in method.');
             } else {
                 throw new Error(err.message || 'Could not create account.');
             }

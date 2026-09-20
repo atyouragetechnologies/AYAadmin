@@ -494,7 +494,8 @@ export function MatchReport({ storyId, userTraits, idolName, onClose }: MatchRep
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.5 }}
-                className="fixed bottom-0 left-0 right-0 w-full p-3 sm:p-4 bg-gradient-to-t from-[#050817] via-[#050817]/95 to-transparent z-50 flex flex-col items-center gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]"
+                className="fixed bottom-0 left-0 right-0 w-full p-3 sm:p-4 bg-gradient-to-t from-[#050817] via-[#050817]/95 to-transparent z-50 flex flex-col items-center gap-2"
+                style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
             >
                 {/* Native Share — Android only, shows the OS share sheet */}
                 {isNativeApp && (

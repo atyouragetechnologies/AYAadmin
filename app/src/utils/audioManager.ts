@@ -36,14 +36,14 @@ export const ensureRunningCtx = (): AudioContext | null => {
 };
 
 // MUST be called directly inside a user gesture handler (onClick, onTouchEnd)
-export const unlockAudio = async (): Promise<void> => {
+export const unlockAudio = (): void => {
   const context = getCtx();
   if (!context) return;
   try {
     if (context.state === 'suspended') {
-      await context.resume();
+      context.resume().catch(() => {});
     }
-    // Safari extra unlock: play a silent buffer
+    // Safari extra unlock: play a silent buffer synchronously!
     const buffer = context.createBuffer(1, 1, 22050);
     const source = context.createBufferSource();
     source.buffer = buffer;
