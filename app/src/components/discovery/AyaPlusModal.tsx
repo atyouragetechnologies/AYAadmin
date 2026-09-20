@@ -100,7 +100,7 @@ export function AyaPlusModal({ isOpen, onClose }: AyaPlusModalProps) {
 
 
                     <p className="text-xs text-slate-300 mb-5 leading-relaxed">
-                        Step beyond the daily limit. Transform daily dilemmas into deep, lasting mental models.
+                        Step beyond the 3-story limit. Transform dilemmas into deep, lasting mental models.
                     </p>
 
                     {/* Feature List */}

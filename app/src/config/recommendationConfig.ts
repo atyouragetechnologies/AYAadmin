@@ -150,7 +150,7 @@ export const AYA_PLAN_COMPARISON = [
   { 
     key: 'stories',
     feature: 'Story & Library Access', 
-    free: '3 complete stories / day', 
+    free: '3 stories total', 
     pro: 'Unlimited stories & Full story library', 
     highlightPro: true 
   },
@@ -213,7 +213,7 @@ export const AYA_PLAN_COMPARISON = [
 ] as const;
 
 export const AYAPRO_BENEFITS = [
-  { key: 'stories',        label: 'Unlimited stories & Full story library',             free: '3 stories/day' },
+  { key: 'stories',        label: 'Unlimited stories & Full story library',             free: '3 stories total' },
   { key: 'dna_evolution',  label: 'DNA evolution based on continued gameplay & choices',free: '1 DNA report only' },
   { key: 'dna_insights',   label: 'More refined/personalized DNA insights over time',   free: 'Initial report' },
   { key: 'career',         label: 'Full / deeper career recommendations',               free: 'Basic matches' },

@@ -59,13 +59,7 @@ export function EnergyModal({ isOpen, onClose, onUpgrade, previewLevel }: Energy
                             : "bg-cyan-500/20 text-cyan-300 border-cyan-500/40"
                     )}>
                         <Zap size={14} className={isDepleted ? "text-amber-400 fill-amber-400" : "text-cyan-400 fill-cyan-400 animate-pulse"} />
-                        {isDepleted ? "Daily Limit Reached" : "Daily Story Energy"}
-                    </span>
-                    <span className={clsx(
-                        "text-xs font-semibold flex items-center gap-1",
-                        isCandyMode ? "text-slate-500" : "text-slate-400"
-                    )}>
-                        <Clock size={12} /> Refuels at 00:00
+                        {isDepleted ? "Free Limit Reached" : "Free Story Energy"}
                     </span>
                 </div>
 
@@ -74,7 +68,7 @@ export function EnergyModal({ isOpen, onClose, onUpgrade, previewLevel }: Energy
                     "text-2xl md:text-3xl font-black uppercase tracking-tight mb-2",
                     isCandyMode ? "text-slate-900" : "text-amber-100 drop-shadow-sm"
                 )}>
-                    {isDepleted ? "All 3 Stories Completed!" : `${remainingEnergy} of 3 Stories Available`}
+                    {isDepleted ? "All Free Stories Completed!" : `${remainingEnergy} of 3 Stories Available`}
                 </h2>
 
                 <p className={clsx(
@@ -82,8 +76,8 @@ export function EnergyModal({ isOpen, onClose, onUpgrade, previewLevel }: Energy
                     isCandyMode ? "text-slate-600" : "text-slate-300"
                 )}>
                     {isDepleted 
-                        ? "You've finished your 3 daily stories. Come back tomorrow for new stories and fresh perspectives!"
-                        : `You have ${remainingEnergy} free ${remainingEnergy === 1 ? 'story' : 'stories'} left to play today. Make each choice count!`
+                        ? "You've finished your free trial stories. Unlock AYA+ to keep playing and dive deeper into your journey!"
+                        : `You have ${remainingEnergy} free ${remainingEnergy === 1 ? 'story' : 'stories'} left to play. Make each choice count!`
                     }
                 </p>
 
@@ -93,11 +87,11 @@ export function EnergyModal({ isOpen, onClose, onUpgrade, previewLevel }: Energy
                     isCandyMode ? "bg-amber-50/80 border-amber-200" : "bg-slate-950/60 border-slate-800"
                 )}>
                     <div className="flex justify-between items-center text-xs font-bold">
-                        <span className={clsx(isCandyMode ? "text-slate-700" : "text-slate-400")}>Today's Energy</span>
-                        <span className="text-amber-400 font-mono tracking-wider">{remainingEnergy} / {FREE_DAILY_STORY_LIMIT} Energy</span>
+                        <span className={clsx(isCandyMode ? "text-slate-700" : "text-slate-400")}>Remaining Energy</span>
+                        <span className="text-amber-400 font-mono tracking-wider">{remainingEnergy} / 3 Energy</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2.5">
-                        {Array.from({ length: FREE_DAILY_STORY_LIMIT }).map((_, idx) => {
+                        {Array.from({ length: 3 }).map((_, idx) => {
                             const isAvailable = idx < remainingEnergy;
                             return (
                                 <div 
@@ -137,7 +131,7 @@ export function EnergyModal({ isOpen, onClose, onUpgrade, previewLevel }: Energy
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-amber-400 mb-0.5">
                                 <Sparkles size={12} className="shrink-0" />
-                                <span>Tomorrow's Journey</span>
+                                <span>Upcoming Journey</span>
                             </div>
                             <h4 className="text-base md:text-lg font-black uppercase tracking-tight truncate text-white">
                                 {previewLevel.personality}
@@ -151,23 +145,6 @@ export function EnergyModal({ isOpen, onClose, onUpgrade, previewLevel }: Energy
                         </div>
                     </div>
                 )}
-
-                {/* Why 3 Stories a Day? Section */}
-                <div className={clsx(
-                    "p-4 md:p-5 rounded-2xl border mb-6 flex flex-col gap-2.5",
-                    isCandyMode ? "bg-slate-50 border-slate-200" : "bg-slate-800/40 border-slate-700/60"
-                )}>
-                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
-                        <Compass size={16} />
-                        <span>Why 3 Stories a Day?</span>
-                    </div>
-                    <p className={clsx("text-xs leading-relaxed", isCandyMode ? "text-slate-600" : "text-slate-300")}>
-                        <strong className={isCandyMode ? "text-slate-800" : "text-white"}>Quality over binge-scrolling.</strong> Experiencing 3 real-world decisions every day gives your mind the time to reflect, internalize lessons, and build lasting intuition without mental burnout.
-                    </p>
-                    <p className={clsx("text-xs leading-relaxed", isCandyMode ? "text-slate-600" : "text-slate-300")}>
-                        <strong className={isCandyMode ? "text-slate-800" : "text-white"}>Compounding habit:</strong> 3 stories a day means 90 legendary lives explored every month!
-                    </p>
-                </div>
 
                 {/* CTA Buttons */}
                 <div className="flex flex-col gap-3">
@@ -187,7 +164,7 @@ export function EnergyModal({ isOpen, onClose, onUpgrade, previewLevel }: Energy
                                     : "bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-[0_0_25px_rgba(251,191,36,0.4)]")
                         )}
                     >
-                        {isDepleted ? "See You Tomorrow! 🌙" : "Continue Today's Journey ⚡"}
+                        {isDepleted ? "Upgrade to AYA+ 🌙" : "Continue Journey ⚡"}
                     </button>
 
                     {/* Pro Upgrade Link */}
@@ -205,7 +182,7 @@ export function EnergyModal({ isOpen, onClose, onUpgrade, previewLevel }: Energy
                             )}
                         >
                             <Crown size={14} className="text-yellow-400" />
-                            <span>Want unlimited stories without daily limits? <strong>Unlock AYA+</strong></span>
+                            <span>Ready for more? <strong>Unlock AYA+</strong></span>
                         </button>
                     )}
                 </div>

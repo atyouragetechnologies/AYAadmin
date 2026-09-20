@@ -211,7 +211,7 @@ export function PersonalityIntro({ level, onStart, onBack }: PersonalityIntroPro
                             </p>
                         </div>
 
-                        {/* 3 Stories a Day Habit Notice (Free users) */}
+                        {/* 3 Stories Habit Notice (Free users) */}
                         {!isAyaPlus && (
                             <div 
                                 onClick={() => {
@@ -230,12 +230,12 @@ export function PersonalityIntro({ level, onStart, onBack }: PersonalityIntroPro
                                     <Zap size={14} className="text-amber-400 shrink-0" />
                                     <span>
                                         {remainingEnergy > 0 
-                                            ? "You get 3 stories a day · Come back tomorrow for new stories!" 
-                                            : "Daily limit reached · Come back tomorrow for new stories!"}
+                                            ? `You have ${remainingEnergy} free stories left!` 
+                                            : "Free limit reached · Unlock AYA+ to play"}
                                     </span>
                                 </div>
                                 <span className="text-[10px] font-black uppercase tracking-wider underline text-amber-400 shrink-0 ml-2">
-                                    Why 3?
+                                    Info
                                 </span>
                             </div>
                         )}
@@ -261,7 +261,7 @@ export function PersonalityIntro({ level, onStart, onBack }: PersonalityIntroPro
                                 )}
                             >
                                 <Lock size={18} className="text-white" />
-                                Energy Recharging · Unlocks Tomorrow
+                                Unlock AYA+ to Play
                             </button>
                         ) : (
                             <button
